@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<configuration>
+	<login>testru</login>
+	<soap_pass>soap_pass</soap_pass>
+	<api_pass>api_pass</api_pass>
+	<thumpprint>jhgiuglkj</thumpprint>
+	<inbound isArchive="true"><!--true / false-->
+		<document>
+			<doctype>[0-9]{14}J12010[0-9]{23}\.RPL</doctype><!-- [квитанция] -->
+			<localPath>/home/levitsky/JavaIDE/J2EE/ftpex-jconnector/connector/inbound/default/</localPath>
+			<thumpprint>jhgiuglkj</thumpprint>
+		</document>
+		<document>
+			<doctype>recadv_.*\.xml</doctype><!-- [recadv] -->
+			<localPath>/home/levitsky/JavaIDE/J2EE/ftpex-jconnector/connector/inbound/recadv/</localPath>
+			<thumpprint>jhgiuglkj</thumpprint>
+		</document>
+	</inbound>
+	<outbound isArchive="true"><!--true / false-->
+		<document needToBeSigned="true"><!--true / false-->
+			<doctype>[0-9]{14}J12010[0-9]{23}\.RPL</doctype><!-- [квитанция] -->
+			<localPath>/home/levitsky/JavaIDE/J2EE/ftpex-jconnector/connector/inbound/default/</localPath>
+			<thumpprint>jhgiuglkj</thumpprint>
+		</document>
+		<document needToBeSigned="false--"><!--true / false-->
+			<doctype>recadv_.*\.xml</doctype><!-- [recadv] -->
+			<localPath>/home/levitsky/JavaIDE/J2EE/ftpex-jconnector/connector/inbound/recadv/</localPath>
+			<thumpprint>jhgiuglkj</thumpprint>
+		</document>		
+	</outbound>
+</configuration>

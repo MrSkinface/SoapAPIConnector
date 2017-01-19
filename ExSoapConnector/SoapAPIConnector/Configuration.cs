@@ -18,6 +18,15 @@ namespace APICon.conf
         public string Thumpprint { get; set; }
         [XmlAttribute(AttributeName = "needToBeSigned")]
         public string NeedToBeSigned { get; set; }
+
+        override
+        public string ToString()
+        {
+            return "\n\tDoctype" + Doctype +
+                   "\n\tLocalPath" + LocalPath +
+                   "\n\tThumpprint" + Thumpprint +
+                   "\n\tNeedToBeSigned" + NeedToBeSigned;
+        }
     }
 
     [XmlRoot(ElementName = "inbound")]
@@ -27,6 +36,13 @@ namespace APICon.conf
         public List<Document> Document { get; set; }
         [XmlAttribute(AttributeName = "isArchive")]
         public string IsArchive { get; set; }
+
+        override
+        public string ToString()
+        {
+            return "\n\tDocument.ToString()" + Document.ToString() +
+                   "\n\tIsArchive" + IsArchive;
+        }
     }
 
     [XmlRoot(ElementName = "outbound")]
@@ -36,6 +52,13 @@ namespace APICon.conf
         public List<Document> Document { get; set; }
         [XmlAttribute(AttributeName = "isArchive")]
         public string IsArchive { get; set; }
+
+        override
+        public string ToString()
+        {
+            return "\n\tDocument.ToString()" + Document.ToString() +
+                   "\n\tIsArchive" + IsArchive;
+        }
     }
 
     [XmlRoot(ElementName = "configuration")]
@@ -53,5 +76,16 @@ namespace APICon.conf
         public Inbound Inbound { get; set; }
         [XmlElement(ElementName = "outbound")]
         public Outbound Outbound { get; set; }
+
+        override
+        public string ToString()
+        {
+            return "\n\tLogin" + Login +
+                   "\n\tSoap_pass" + Soap_pass +
+                   "\n\tApi_pass" + Api_pass +
+                   "\n\tThumpprint" + Thumpprint +
+                   "\n\tInbound.ToString()" + Inbound.ToString() +
+                   "\n\tOutbound.ToString()" + Outbound.ToString();
+        }
     }
 }
