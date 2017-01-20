@@ -35,7 +35,7 @@ namespace APICon.rest
             {
                 response = e.Response;
             }
-            StreamReader reader = new StreamReader(response.GetResponseStream());
+            StreamReader reader = new StreamReader(response.GetResponseStream());            
             string responseFromServer = reader.ReadToEnd();            
             return Utils.FromJson<Type>(responseFromServer);
         }
