@@ -9,6 +9,8 @@ using APICon.conf;
 using APICon.soap;
 using System.Xml;
 using System.Xml.Serialization;
+using System.Security.Cryptography;
+using APICon.controller;
 
 namespace SoapAPIConnector
 {
@@ -17,30 +19,27 @@ namespace SoapAPIConnector
         static void Main(string[] args)
         {
             // testing conf loading
-
-            /*string path = Path.GetFullPath(args[0]);
-            Console.WriteLine(path);            
+            
+            string path = Path.GetFullPath(args[0]);                      
             byte[] xml = File.ReadAllBytes(path);            
-            Configuration conf = Utils.FromXml<Configuration>(Encoding.GetEncoding("UTF-8").GetString(xml));
-            Console.WriteLine(conf.ToString());*/
+            Configuration conf = Utils.FromXml<Configuration>(Encoding.GetEncoding("UTF-8").GetString(xml));            
 
-            // testing soap
+            // testing controller
 
-            string login = "testru";
-            string pass = "2c5348cadc34783815fa1cc8f5cebf67";
-            GetListRequest req = new GetListRequest();
-            req.user = new User();
-            req.user.login = login;
-            req.user.pass = pass;
+            Controller controller = new Controller(conf);
+            List<string> list;
+            try
+            {
+                list = controller.getList();
+                foreach (string name in list)
+                    Console.WriteLine(name);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+            
 
-            //Console.WriteLine(Utils.ToXml<GetListRequest>(req, "UTF-8"));
-
-            GetListResponse resp=(GetListResponse)Soap.GetList<GetListResponse>(req);
-            Console.WriteLine(resp.errorCode);
-            foreach(string name in resp.list)
-                Console.WriteLine(name);
-
-           
         }
     }
 }

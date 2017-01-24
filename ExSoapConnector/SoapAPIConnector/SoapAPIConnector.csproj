@@ -49,6 +49,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Configuration.cs" />
+    <Compile Include="ConnectorController.cs" />
     <Compile Include="Http.cs" />
     <Compile Include="HttpTypes.cs" />
     <Compile Include="Program.cs" />

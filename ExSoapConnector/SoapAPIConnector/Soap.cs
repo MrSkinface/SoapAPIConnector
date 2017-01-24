@@ -33,6 +33,8 @@ namespace APICon.soap
     {
         [XmlElement(ElementName = "errorCode")]
         public int errorCode { get; set; }
+        [XmlElement(ElementName = "errorMessage")]
+        public string errorMessage { get; set; }
     }
 
     /*

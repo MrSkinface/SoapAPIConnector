@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Xml.Serialization;
 using System.Xml;
 using System.IO;
+using System.Security.Cryptography;
 
 namespace APICon.Util
 {
@@ -66,6 +67,45 @@ namespace APICon.Util
             using (StreamReader reader = new StreamReader(stream, Encoding.GetEncoding(encodingName)))
             {
                 return reader.ReadToEnd();
+            }
+        }
+        public static string Base64Encode(string plainText, string encodingName)
+        {
+            var plainTextBytes = Encoding.GetEncoding(encodingName).GetBytes(plainText);
+            return System.Convert.ToBase64String(plainTextBytes);
+        }
+        public static string Base64Encode(byte[] data, string encodingName)
+        {
+            var plainTextBytes = data;
+            return System.Convert.ToBase64String(plainTextBytes);
+        }
+        public static string Base64Decode(string baseText, string encodingName)
+        {
+            var base64textBytes = System.Convert.FromBase64String(baseText);
+            return Encoding.GetEncoding(encodingName).GetString(base64textBytes);
+        }
+        public static byte[] Base64DecodeToBytes(string baseText, string encodingName)
+        {
+            var base64textBytes = System.Convert.FromBase64String(baseText);
+            return base64textBytes;
+        }
+        public static string BytesToString(byte[] data, string encodingName)
+        {
+            return Encoding.GetEncoding(encodingName).GetString(data);
+        }
+        public static byte[] StringToBytes(string data, string encodingName)
+        {
+            return Encoding.GetEncoding(encodingName).GetBytes(data);
+        }
+        public static string GetMD5String(string input)
+        {
+            using (MD5 md5 = new MD5CryptoServiceProvider())
+            {
+                byte[] data = md5.ComputeHash(Encoding.ASCII.GetBytes(input));
+                StringBuilder sb = new StringBuilder();
+                foreach (var b in data)
+                    sb.Append(b.ToString("x2"));
+                return sb.ToString();
             }
         }
     }
