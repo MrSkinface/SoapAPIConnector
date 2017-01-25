@@ -52,6 +52,7 @@
     <Compile Include="ConnectorController.cs" />
     <Compile Include="Http.cs" />
     <Compile Include="HttpTypes.cs" />
+    <Compile Include="Logger.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Soap.cs" />

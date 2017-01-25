@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Newtonsoft.Json;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
 using System.Xml;
@@ -14,11 +15,11 @@ namespace APICon.Util
     {
         public static string ToJson(object o)
         {
-            return null;
+            return JsonConvert.SerializeObject(o);
         }
         public static object FromJson<Type>(string json)
         {
-            return null;
+            return JsonConvert.DeserializeObject<Type>(json);
         }
         public static string ToXml<T>(T obj)
         {
@@ -88,6 +89,10 @@ namespace APICon.Util
         {
             var base64textBytes = System.Convert.FromBase64String(baseText);
             return base64textBytes;
+        }
+        public static string Base64DecodeToString(byte[] baseText, string encodingName)
+        {            
+            return Encoding.GetEncoding(encodingName).GetString(baseText);
         }
         public static string BytesToString(byte[] data, string encodingName)
         {

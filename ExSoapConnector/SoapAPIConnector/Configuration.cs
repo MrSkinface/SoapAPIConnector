@@ -19,7 +19,9 @@ namespace APICon.conf
         [XmlElement(ElementName = "thumpprint")]
         public string Thumpprint { get; set; }
         [XmlAttribute(AttributeName = "needToBeSigned")]
-        public bool NeedToBeSigned { get; set; }                
+        public bool NeedToBeSigned { get; set; }
+        [XmlAttribute(AttributeName = "ticketsGenerate")]
+        public bool TicketsGenerate { get; set; }
     }
 
     [XmlRoot(ElementName = "inbound")]
@@ -32,7 +34,9 @@ namespace APICon.conf
         [XmlElement(ElementName = "document")]
         public List<Document> Document { get; set; }
         [XmlAttribute(AttributeName = "isArchive")]
-        public bool IsArchive { get; set; }                
+        public bool IsArchive { get; set; }
+        [XmlAttribute(AttributeName = "useSubFoldersByDocType")]
+        public bool SubFolders { get; set; }
     }    
 
     [XmlRoot(ElementName = "configuration")]
@@ -51,6 +55,21 @@ namespace APICon.conf
         [XmlElement(ElementName = "inbound")]
         public InboundOutbound Inbound { get; set; }
         [XmlElement(ElementName = "outbound")]
-        public InboundOutbound Outbound { get; set; }       
+        public InboundOutbound Outbound { get; set; }
+
+        public Document GetCustomInboundSettings(string docType)
+        {
+            foreach (Document doc in this.Inbound.Document)
+                if (doc.Doctype == docType)
+                    return doc;
+            return null;
+        }
+        public Document GetCustomOutboundSettings(string docType)
+        {
+            foreach (Document doc in this.Outbound.Document)
+                if (doc.Doctype == docType)
+                    return doc;
+            return null;
+        }
     }
 }

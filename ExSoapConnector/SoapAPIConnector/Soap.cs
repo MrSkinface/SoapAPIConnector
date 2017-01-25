@@ -124,14 +124,14 @@ namespace APICon.soap
         public static object SendDoc<Type>(SendDocRequest req)
         {
             StringBuilder sb = new StringBuilder(
-@"<soap:getDoc>           
+@"<soap:sendDoc>           
             <user>
                 <login>").
             Append(req.user.login).Append(@"</login><pass>").
             Append(req.user.pass).Append(@"</pass></user>").
             Append(@"<fileName>").Append(req.fileName).Append(@"</fileName><content>").
             Append(req.content).Append(@"</content>
-</soap:getDoc>");
+</soap:sendDoc>");
             return Action<Type>(createRequestBody(sb.ToString()));            
         }
         public static object ArchiveDoc<Type>(ArchiveDocRequest req)
@@ -161,37 +161,38 @@ namespace APICon.soap
         }
         
         private static object Action<Type>(string requestBody)
-        {
-            HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(@"http://195.191.226.106:8080/soap");
+        {            
+            HttpWebRequest webRequest = WebRequest.CreateHttp(@"http://195.191.226.106:8080/soap");
             webRequest.Headers.Add(@"SOAP:Action");
             webRequest.ContentType = "text/xml; charset=UTF-8";
             webRequest.Accept = "text/xml";
             webRequest.Method = "POST";
             XmlDocument bodyRequest = new XmlDocument();
-            bodyRequest.LoadXml(requestBody);
+            bodyRequest.LoadXml(requestBody);                 
             using (Stream stream = webRequest.GetRequestStream())
             {
                 bodyRequest.Save(stream);
-            }
-            WebResponse response;
-            try
-            {
-                response = webRequest.GetResponse();
-            }
-            catch (WebException e)
-            {
-                response = e.Response;
-            }            
-            XmlReader reader;
-            using (reader = XmlReader.Create(response.GetResponseStream()))
-            {
-                reader.ReadToFollowing("result");
-                reader = reader.ReadSubtree();
-                StringBuilder sb = new StringBuilder();
-                while (reader.Read())
-                    sb.Append(reader.ReadOuterXml());
-                return Utils.FromXml<Type>(sb.ToString(), "UTF-8"); ;
-            }
+                WebResponse response = null;                 
+                try
+                {
+                    response = webRequest.GetResponse();                    
+                    XmlReader reader;
+                    using (reader = XmlReader.Create(response.GetResponseStream()))
+                    {
+                        reader.ReadToFollowing("result");
+                        reader = reader.ReadSubtree();
+                        StringBuilder sb = new StringBuilder();
+                        while (reader.Read())
+                            sb.Append(reader.ReadOuterXml());
+                        return Utils.FromXml<Type>(sb.ToString(), "UTF-8");
+                    }
+                }                
+                finally
+                {
+                    stream.Close();
+                    response.Close();
+                }                
+            }                      
         }
     }
 }
