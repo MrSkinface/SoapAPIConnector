@@ -240,7 +240,23 @@ namespace APICon.rest
     /*
      enqueue tickets request / response
     */
-    // todo (or not ???)
+    public class EnqueueTicketRequest : Request
+    {
+        public string identifier { get; set; }
+        public string xml { get; set; }
+        public string sign { get; set; }
+        public EnqueueTicketRequest() { }
+        public EnqueueTicketRequest(string authToken, string identifier, string xml, string sign)
+        {
+            this.xml = xml;
+            this.sign = sign;
+            this.identifier = identifier;
+            base.varToken = authToken;
+        }
+    }
+    public class EnqueueTicketResponse : Response
+    {
+    }
     /*
      create answers (ptorg12 / zaktprm) request / response
     */
@@ -313,4 +329,156 @@ namespace APICon.rest
     /*
      enqueue answers (ptorg12 / zaktprm) request / response
     */
+    public class EnqueueAnswerRequest : Request
+    {
+        public EnqueueAnswerRequest() { }
+        public EnqueueAnswerRequest(string authToken, string identifier, string xml, string sign)
+        {
+            this.xml = xml;
+            this.sign = sign;
+            this.identifier = identifier;
+            base.varToken = authToken;
+        }
+        public string identifier { get; set; }
+        public string sign { get; set; }
+        public string xml { get; set; }
+    }
+    public class EnqueueAnswerResponse : Response
+    {
+    }
+    /*
+     send document (sfakt,otorg12,iaktprm) request / response
+    */
+    public class DocumentSendRequest : Request
+    {
+        public DocumentSendRequest() { }
+        public DocumentSendRequest(string authToken, string body, string sign, string doc_type)
+        {
+            base.varToken = authToken;
+            this.body = body;
+            this.sign = sign;
+            this.doc_type = doc_type;
+        }
+        public string body { get; set; }
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public string comment { get; set; }
+        public string doc_type { get; set; }
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public string identifier { get; set; }
+        public string sign { get; set; }
+    }
+    public class DocumentUPDSendRequest : Request
+    {
+        public DocumentUPDSendRequest() { }
+        public DocumentUPDSendRequest(string authToken, string body, string sign, string doc_type)
+        {
+            base.varToken = authToken;
+            this.body = body;
+            this.sign = new List<UPDSign>();
+            this.sign.Add(new UPDSign(sign));
+            this.doc_type = doc_type;
+        }
+        public string body { get; set; }
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public string comment { get; set; }
+        public string doc_type { get; set; }
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public string identifier { get; set; }
+        public List<UPDSign> sign { get; set; }
+    }
+    public class UPDSign
+    {
+        public string type { get; set; }
+        public string body { get; set; }
+
+        public UPDSign() { }
+        public UPDSign(string sign)
+        {
+            this.type = "1";
+            this.body = sign;
+        }
+    }
+    public class DocumentSendResponse : Response
+    {
+    }
+    /*
+        for scanning tickets need to be signed/answered 
+    */
+    public class GetTimeLineRequest : Request
+    {
+        public GetTimeLineRequest() { }
+        public GetTimeLineRequest(string authToken, string timefrom, string timeto)
+        {
+            this.timefrom = timefrom;
+            this.timeto = timeto;
+            base.varToken = authToken;
+        }
+        public GetTimeLineRequest(string authToken, string exchangeid)
+        {
+            this.exchangeid = exchangeid;
+            base.varToken = authToken;
+        }
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public string timefrom { get; set; }
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public string timeto { get; set; }
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public string exchangeid { get; set; }
+    }
+    public class GetTimeLineResponse : Response
+    {
+        public Event[] timeline { get; set; }
+    }
+    public class Event
+    {
+        public string document_id { get; set; }
+        public string event_date { get; set; }
+        public string event_id { get; set; }
+        public string event_status { get; set; }
+        public string exchangeid { get; set; }
+        public bool need_reply_reciept { get; set; }
+        public string recipient_id { get; set; }
+        public string sender_id { get; set; }
+        override
+        public string ToString()
+        {
+            return
+                "\n\tdocument_id: " + document_id
+                + "\n\tevent_date: " + event_date
+                + "\n\tevent_id: " + event_id
+                + "\n\tevent_status: " + event_status
+                + "\n\texchangeid: " + exchangeid
+                + "\n\tneed_reply_reciept: " + need_reply_reciept
+                + "\n\trecipient_id: " + recipient_id
+                + "\n\tsender_id: " + sender_id;
+        }
+    }
+    public class GetDocInfoRequest : Request
+    {
+        public string identifier { get; set; }
+
+        public GetDocInfoRequest() { }
+        public GetDocInfoRequest(string authToken, string identifier)
+        {
+            this.identifier = identifier;
+            base.varToken = authToken;
+        }
+    }
+    public class GetDocInfoResponse : Response
+    {
+        public ApiDocument document { get; set; }
+    }
+    public class ApiDocument
+    {
+        public string doc_type { get; set; }
+        public string document_id { get; set; }
+        public string event_date { get; set; }
+        public string event_direction { get; set; }
+        public string file_name { get; set; }
+        public string recipient_id { get; set; }
+        public string sender_id { get; set; }
+        public string sender_internal_id { get; set; }
+        public string file_body { get; set; }
+        public string sign_body { get; set; }
+    }
 }

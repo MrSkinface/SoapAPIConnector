@@ -87,6 +87,7 @@ namespace APICon.soap
         [XmlElement(ElementName = "fileName")]
         public string fileName { get; set; }
     }
+    [XmlRoot(ElementName = "result")]
     public class ArchiveDocResponse : Response
     {
 
@@ -184,6 +185,7 @@ namespace APICon.soap
                         StringBuilder sb = new StringBuilder();
                         while (reader.Read())
                             sb.Append(reader.ReadOuterXml());
+                        //Console.WriteLine(sb.ToString());
                         return Utils.FromXml<Type>(sb.ToString(), "UTF-8");
                     }
                 }                

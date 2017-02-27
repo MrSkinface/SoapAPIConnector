@@ -17,9 +17,11 @@ namespace APICon.controller
     {
         List<string> getList();
         bool sendDoc(string fileName, string base64data);
+        bool sendDocApi(string content, string sign, string docType);
         bool archiveDoc(string name);
         byte[] getDoc(string name);
         Dictionary<string,byte[]> Ticket(string thumbprint,string uuid);
+        bool sendTicket(string content, string sign, string docId);
         string Sign(string thumbprint,string base64data);
         ExCert GetExCertificate(string thumbprint);
         string[] GetCertificateNames();        
@@ -44,7 +46,10 @@ namespace APICon.controller
             req.fileName = name;
             ArchiveDocResponse resp = (ArchiveDocResponse)Soap.ArchiveDoc<ArchiveDocResponse>(req);
             if (resp.errorCode != 0)
+            {
+                Logger.log("ERROR: " + resp.errorMessage);
                 throw new Exception(resp.errorMessage);
+            }                
             return resp.errorCode == 0;
         }
         public byte[] getDoc(string name)
@@ -80,9 +85,25 @@ namespace APICon.controller
             req.content = base64data;
             SendDocResponse resp = (SendDocResponse)Soap.SendDoc<SendDocResponse>(req);
             if (resp.errorCode != 0)
+            {                
+                Logger.log("ERROR: " + resp.errorMessage);
                 throw new Exception(resp.errorMessage);
+            }
             return resp.errorCode == 0;
-        }        
+        }
+        public bool sendDocApi(string content, string sign, string docType)
+        {
+            APICon.rest.Request req = null;
+            if(docType.StartsWith("ON_SCHF"))
+                req = new DocumentUPDSendRequest(authToken, content, sign, docType);
+            else
+                req = new DocumentSendRequest(authToken, content, sign, docType);
+            DocumentSendResponse response = (DocumentSendResponse)Http.post<DocumentSendResponse>("https://api-service.edi.su/Api/Dixy/Document/Send", req);
+            if (response.intCode == 200)
+                return true;
+            Logger.log("ERROR: "+ response.varMessage+" [ "+GetIDFileFromTicket(content)+" ]");
+            return false;
+        }
         public string Sign(string thumbprint, string base64data)
         {
             CAdESCOM.CPStore store = new CAdESCOM.CPStore();
@@ -201,5 +222,80 @@ namespace APICon.controller
                 store.Close();
             }
         }
+        public bool sendTicket(string content, string sign, string docId)
+        {
+            EnqueueTicketRequest req = new EnqueueTicketRequest(authToken, docId, content, sign);
+            EnqueueTicketResponse enqueueResponse = (EnqueueTicketResponse)Http.post<EnqueueTicketResponse>("https://api-service.edi.su/Api/Dixy/Ticket/Enqueue", req);
+            if (enqueueResponse.intCode == 200)
+                return true;
+            return false;
+        }
+        /*
+            for events confirm 
+        */
+        public Event[] getIncomingEvents()
+        {
+            string timeFrom = DateTime.Now.AddDays(-60).ToString("yyyy-MM-dd HH:mm:ss");
+            string timeTo = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            GetTimeLineResponse response = (GetTimeLineResponse)Http.post<GetTimeLineResponse>("https://api-service.edi.su/Api/Dixy/TimeLine/GetTimeLine", new GetTimeLineRequest(authToken, timeFrom, timeTo));
+            List<Event> l = new List<Event>();
+            foreach (Event e in response.timeline)
+                if (e.event_status.Contains("RECIEVED") && e.need_reply_reciept)
+                    l.Add(e);
+            Event[] incomingEvents = new Event[l.Count];
+            int i = 0;
+            foreach (Event e in l)
+                incomingEvents[i++] = e;
+            return incomingEvents;
+        }
+        public Event[] getIncomingEvents(Configuration conf)
+        {
+            string timeFrom = DateTime.Now.AddDays(-60).ToString("yyyy-MM-dd HH:mm:ss");
+            string timeTo = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            GetTimeLineResponse response = (GetTimeLineResponse)Http.post<GetTimeLineResponse>("https://api-service.edi.su/Api/Dixy/TimeLine/GetTimeLine", new GetTimeLineRequest(authToken, timeFrom, timeTo));
+            List<Event> l = new List<Event>();
+            /**/
+            List<string> docs=new List<string>();
+            foreach (Document d in conf.EDOTickets.Document)
+                docs.Add(d.Doctype);
+            /**/
+            foreach (Event e in response.timeline)                
+                if (e.event_status.Contains("RECIEVED") && e.need_reply_reciept)
+                    if(docs.Contains(getDocInfoByEvent(e).doc_type))
+                        l.Add(e);
+            Event[] incomingEvents = new Event[l.Count];
+            int i = 0;
+            foreach (Event e in l)
+                incomingEvents[i++] = e;
+            return incomingEvents;
+        }
+        public ApiDocument getDocInfoByEvent(Event e)
+        {
+            GetDocInfoRequest req = new GetDocInfoRequest(authToken, e.document_id);
+            GetDocInfoResponse resp = (GetDocInfoResponse)Http.post<GetDocInfoResponse>("https://api-service.edi.su/Api/Dixy/TimeLine/GetDocData", req);
+            if (resp.intCode == 200)
+            {
+                GetContentResponse content = getDocumentContent(e);
+                resp.document.file_body = content.body;
+                resp.document.sign_body = content.sign;
+                return resp.document;
+            }
+            return null;
+        }
+        
+        public bool confirmEvent(Event e, string body, string sign)
+        {
+            EnqueueTicketRequest req = new EnqueueTicketRequest(authToken, e.document_id, body, sign);
+            EnqueueTicketResponse enqueueResponse = (EnqueueTicketResponse)Http.post<EnqueueTicketResponse>("https://api-service.edi.su/Api/Dixy/Ticket/Enqueue", req);
+            if (enqueueResponse.intCode == 200)
+                return true;
+            return false;
+        }
+        public GetContentResponse getDocumentContent(Event e)
+        {
+            GetContentResponse response = (GetContentResponse)Http.post<GetContentResponse>("https://api-service.edi.su/Api/Dixy/Content/GetBoth", new GetContentRequest(authToken, e.document_id));
+            return response;
+        }
+
     }
 }

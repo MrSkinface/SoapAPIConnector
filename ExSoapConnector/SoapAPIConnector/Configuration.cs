@@ -56,6 +56,8 @@ namespace APICon.conf
         public InboundOutbound Inbound { get; set; }
         [XmlElement(ElementName = "outbound")]
         public InboundOutbound Outbound { get; set; }
+        [XmlElement(ElementName = "EDOTickets")]
+        public InboundOutbound EDOTickets { get; set; }
 
         public Document GetCustomInboundSettings(string docType)
         {
@@ -67,6 +69,13 @@ namespace APICon.conf
         public Document GetCustomOutboundSettings(string docType)
         {
             foreach (Document doc in this.Outbound.Document)
+                if (doc.Doctype == docType)
+                    return doc;
+            return null;
+        }
+        public Document GetCustomEDOTicketSettings(string docType)
+        {
+            foreach (Document doc in this.EDOTickets.Document)
                 if (doc.Doctype == docType)
                     return doc;
             return null;
