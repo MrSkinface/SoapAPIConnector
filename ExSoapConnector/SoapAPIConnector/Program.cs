@@ -25,12 +25,13 @@ namespace SoapAPIConnector
         {
             this.conf = conf;
             this.controller= new Controller(conf);
+            // TICKETS confirm (from 60 days till now)
+            processTickets();
             // IN
-            //processInbound();
+            processInbound();
             // OUT
             processOutbound();
-            // TICKETS confirm (from 60 days till now)
-            //processTickets();
+            
 
 
             // testing crypto etc.
