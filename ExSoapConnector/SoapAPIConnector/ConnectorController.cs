@@ -20,7 +20,7 @@ namespace APICon.controller
         bool sendDocApi(string content, string sign, string docType);
         bool archiveDoc(string name);
         byte[] getDoc(string name);
-        Dictionary<string,byte[]> Ticket(string thumbprint,string uuid);
+        Ticket Ticket(string thumbprint,string uuid);
         bool sendTicket(string content, string sign, string docId);
         string Sign(string thumbprint,string base64data);
         ExCert GetExCertificate(string thumbprint);
@@ -31,6 +31,7 @@ namespace APICon.controller
     {
         private Configuration conf;
         private string authToken;
+        public Controller() { }
         public Controller(Configuration conf)
         {
             this.conf = conf;
@@ -131,7 +132,7 @@ namespace APICon.controller
                 store.Close();
             }
         }
-        public Dictionary<string, byte[]> Ticket(string thumbprint, string fileName)
+        public Ticket Ticket(string thumbprint, string fileName)
         {
             string uuid = fileName.Split('_')[5].Replace(".xml","");
             ExCert cert = GetExCertificate(thumbprint);
@@ -141,12 +142,10 @@ namespace APICon.controller
             {
                 Logger.log("for file ["+ fileName+"] :" + response.varMessage);
                 return null;
-            }
-            var map = new Dictionary<string, byte[]>();
+            }            
             string name=GetIDFileFromTicket(response.content);            
-            byte[] body= Utils.Base64DecodeToBytes(response.content, "windows-1251");
-            map.Add(name,body);
-            return map;
+            byte[] body= Utils.Base64DecodeToBytes(response.content, "windows-1251");            
+            return new Ticket(name, body);
         }
         /**/
         private string GetIDFileFromTicket(string ticketContent)
@@ -190,7 +189,7 @@ namespace APICon.controller
             {
                 if (cert.Thumbprint.Equals(thumbprint) && cert.HasPrivateKey()) return cert;
             }
-            throw new Exception("Certificate not found");
+            throw new Exception("No certificate was found by thumbprint [" + thumbprint + "]");
         }
         public string[] GetCertificateNames()
         {
@@ -297,5 +296,17 @@ namespace APICon.controller
             return response;
         }
 
+    }
+    public class Ticket
+    {
+        public string fileName { get; set; }
+        public byte[] body { get; set; }
+
+        public Ticket() { }
+        public Ticket(string fileName, byte[] body)
+        {
+            this.fileName = fileName;
+            this.body = body;
+        }
     }
 }

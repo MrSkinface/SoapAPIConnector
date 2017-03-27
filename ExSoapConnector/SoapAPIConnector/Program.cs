@@ -21,32 +21,68 @@ namespace SoapAPIConnector
         private Configuration conf;
         private Controller controller;
 
+        public Program()
+        {
+            Console.WriteLine("Usage: ");
+            Console.WriteLine("\t-allcerts\t-\tshow all certificates info");
+            Console.WriteLine("\t-infocert\t-\tshow info for 2nd arg certificate by thumbprint");
+            Console.WriteLine("\t-testcert\t-\ttesting sign methods for 2nd arg certificate by thumbprint");
+        }
+        public Program(String[] args)
+        {
+            controller = new Controller();
+            switch (args[0])
+            {
+                case "-allcerts":
+                    // testing crypto etc.
+                    testCrypto();
+                    break;
+                case "-infocert":
+                    ExCert cert = null;
+                    try
+                    {
+                        cert = controller.GetExCertificate(args[1]);
+                        Console.WriteLine("certificate info:");
+                        Console.WriteLine(cert.ToString());
+                    }
+                    catch(Exception e)
+                    {
+                        Console.WriteLine(e.Message);
+                    }
+                    break;
+                case "-testcert":
+                    String sign = null;
+                    String base64data = Utils.Base64DecodeToString(Encoding.GetEncoding("UTF-8").GetBytes("somedata"), "UTF-8");
+                    try
+                    {
+                        sign = controller.Sign(args[1], base64data);
+                        if (sign != null)
+                            Console.WriteLine("signing O.K.");
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message);
+                    }
+                    break;                
+            }
+            
+            // testing tickets etc.
+            //testTickets();
+            //testConf();
+        }
         public Program(Configuration conf)
         {
             this.conf = conf;
-            this.controller= new Controller(conf);
+            this.controller= new Controller(conf);            
             // TICKETS confirm (from 60 days till now)
             processTickets();
             // IN
             processInbound();
             // OUT
             processOutbound();
-            
-
-
-            // testing crypto etc.
-            //testCrypto();
-            // testing tickets etc.
-            //testTickets();
-            //testConf();
-
         }
-
-        /**/
-        public void testConf()
-        {
-            Console.WriteLine(conf.Outbound.IsArchive);
-        }
+        
+        /**/        
         public void testCrypto()
         {
             foreach (ExCert cert in controller.GetCertificates())
@@ -77,12 +113,12 @@ namespace SoapAPIConnector
                     if (docSettings != null)
                     {
                         string thumbPrint = docSettings.Thumpprint != null ? docSettings.Thumpprint : conf.Thumpprint;
-                        var ticket = controller.Ticket(thumbPrint, apiDocInfo.file_name);
+                        Ticket ticket = controller.Ticket(thumbPrint, apiDocInfo.file_name);
                         if (ticket != null)
                         {                            
-                            string body = Utils.Base64Encode(ticket.First().Value, "windows-1251");
+                            string body = Utils.Base64Encode(ticket.body, "windows-1251");
                             string sign = controller.Sign(thumbPrint, body);
-                            //if (controller.confirmEvent(e, body, sign))
+                            if (controller.confirmEvent(e, body, sign))
                             {
                                 /*
                                     saving incoming ticket
@@ -92,8 +128,8 @@ namespace SoapAPIConnector
                                 /*
                                     saving outgoing ticket
                                  */
-                                saveTicket(docSettings.TicketPath, ticket.First().Key, ticket.First().Value);
-                                saveTicket(docSettings.TicketPath, ticket.First().Key.Replace(".xml", ".bin"), Utils.StringToBytes(sign, "UTF-8")); 
+                                saveTicket(docSettings.TicketPath, ticket.fileName, ticket.body);
+                                saveTicket(docSettings.TicketPath, ticket.fileName.Replace(".xml", ".bin"), Utils.StringToBytes(sign, "UTF-8")); 
                             }
                         }
                     }
@@ -271,11 +307,22 @@ namespace SoapAPIConnector
 
         static void Main(string[] args)
         {
-            Configuration conf = GetAppConfiguration(args[0]);
-            Logger.loadConfig(conf);
-            Logger.log("start");
-            new Program(conf);
-            Logger.log("end");            
+            if (args.Length == 0)
+            {
+                new Program();
+            }
+            else if (args[0].Contains("-"))
+            {
+                new Program(args);
+            }
+            else
+            {
+                Configuration conf = GetAppConfiguration(args[0]);
+                Logger.loadConfig(conf);
+                Logger.log("start");
+                new Program(conf);
+                Logger.log("end");
+            }            
         }
         public static Configuration GetAppConfiguration(string appArg)
         {
