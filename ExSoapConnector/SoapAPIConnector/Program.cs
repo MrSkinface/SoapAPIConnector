@@ -27,6 +27,8 @@ namespace SoapAPIConnector
             Console.WriteLine("\t-allcerts\t-\tshow all certificates info");
             Console.WriteLine("\t-infocert\t-\tshow info for 2nd arg certificate by thumbprint");
             Console.WriteLine("\t-testcert\t-\ttesting sign methods for 2nd arg certificate by thumbprint");
+            Console.WriteLine("\t-testrest\t-\ttesting http connection to web-services");
+            Console.WriteLine("\t-testsoap\t-\ttesting http connection to soap-services");
         }
         public Program(String[] args)
         {
@@ -63,7 +65,21 @@ namespace SoapAPIConnector
                     {
                         Console.WriteLine(e.Message);
                     }
-                    break;                
+                    break;
+                case "-testrest":
+                    AuthorizeResponse response = (AuthorizeResponse)Http.post<AuthorizeResponse>("https://api-service.edi.su/Api/Dixy/Index/Authorize", new AuthorizeRequest("login", "pass"));
+                    if(response!=null)
+                        Console.WriteLine("rest O.K.");
+                    break;
+                case "-testsoap":
+                    GetListRequest req = new GetListRequest();
+                    req.user = new User();
+                    req.user.login = "Login";
+                    req.user.pass = Utils.GetMD5String("pass");
+                    GetListResponse resp = (GetListResponse)Soap.GetList<GetListResponse>(req);
+                    if (resp != null)
+                        Console.WriteLine("soap O.K.");
+                    break;
             }
             
             // testing tickets etc.
@@ -178,17 +194,17 @@ namespace SoapAPIConnector
                         {
                             string thumbPrint = docSettings.Thumpprint != null ? docSettings.Thumpprint : conf.Thumpprint;
                             string body = Utils.Base64Encode(File.ReadAllBytes(name), "windows-1251");
-                            string sign = controller.Sign(thumbPrint, body);                  
+                            string sign = controller.Sign(thumbPrint, body);
                             if (controller.sendDocApi(body, sign, docType))
                                 Logger.log(Path.GetFileName(name) + " sent successfully.");
                             if (conf.Outbound.IsArchive)
                             {
-                                if(moveDocToArc(Path.GetFileName(name), File.ReadAllBytes(name)))
+                                if (moveDocToArc(Path.GetFileName(name), File.ReadAllBytes(name)))
                                     File.Delete(name);
-                                if(moveDocToArc(Path.GetFileName(name).Replace(".xml", ".bin"), Utils.StringToBytes(sign, "UTF-8")))
+                                if (moveDocToArc(Path.GetFileName(name).Replace(".xml", ".bin"), Utils.StringToBytes(sign, "UTF-8")))
                                     File.Delete(name.Replace(".xml", ".bin"));
                             }
-                            
+
                         }
                         else // for simple docs
                         {

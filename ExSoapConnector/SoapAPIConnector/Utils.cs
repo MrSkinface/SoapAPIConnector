@@ -17,9 +17,13 @@ namespace APICon.Util
         {
             return JsonConvert.SerializeObject(o);
         }
-        public static object FromJson<Type>(string json)
+        /*public static object FromJson<Type>(string json)
         {
             return JsonConvert.DeserializeObject<Type>(json);
+        }*/
+        public static T FromJson<T>(string json)
+        {
+            return JsonConvert.DeserializeObject<T> (json);
         }
         public static string ToXml<T>(T obj)
         {

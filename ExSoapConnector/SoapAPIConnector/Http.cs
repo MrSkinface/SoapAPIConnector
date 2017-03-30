@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using APICon.Util;
 using System.Net;
 using System.IO;
+using System.Security.Cryptography.X509Certificates;
 
 namespace APICon.rest
 {
@@ -21,25 +22,39 @@ namespace APICon.rest
             return post<Type>(url, Encoding.GetEncoding("UTF-8").GetBytes(data));
         }
         public static object post<Type>(string url, byte[] data)
-        {            
-            HttpWebRequest post = WebRequest.CreateHttp(url);
+        {
+
+            HttpWebRequest post = (HttpWebRequest) WebRequest.Create(url);
+            ServicePointManager.ServerCertificateValidationCallback += (sender, cert, chain, error) => true;
+            //ServicePointManager.CertificatePolicy = new MyPolicy();
+            post.KeepAlive = false;
+            post.ProtocolVersion = HttpVersion.Version10;
             post.Method = "POST";
             post.ContentType = "application/json; charset=UTF-8";
             post.ContentLength = data.Length;
-            post.GetRequestStream().Write(data, 0, data.Length);
+            Stream reqStream=post.GetRequestStream();
+            reqStream.Write(data, 0, data.Length);
+            reqStream.Close();
             WebResponse response;
             try
             {
-                response = post.GetResponse();
+                response = (HttpWebResponse)post.GetResponse();
             }
             catch (WebException e)
             {                
-                response = e.Response;
+                response = (HttpWebResponse)e.Response;
             }
             StreamReader reader = new StreamReader(response.GetResponseStream());            
             string responseFromServer = reader.ReadToEnd();
             //Console.WriteLine(responseFromServer); //debug only          
             return Utils.FromJson<Type>(responseFromServer);
+        }
+    }
+    public class MyPolicy : ICertificatePolicy
+    {
+        public bool CheckValidationResult(ServicePoint srvPoint, X509Certificate certificate, WebRequest request, int certificateProblem)
+        {
+            return true;
         }
     }
 }

@@ -95,16 +95,16 @@ namespace APICon.controller
         public bool sendDocApi(string content, string sign, string docType)
         {
             APICon.rest.Request req = null;
-            if(docType.StartsWith("ON_SCHF"))
+            if (docType.StartsWith("ON_SCHF"))
                 req = new DocumentUPDSendRequest(authToken, content, sign, docType);
             else
-                req = new DocumentSendRequest(authToken, content, sign, docType);
+                req = new DocumentSendRequest(authToken, content, sign, docType);            
             DocumentSendResponse response = (DocumentSendResponse)Http.post<DocumentSendResponse>("https://api-service.edi.su/Api/Dixy/Document/Send", req);
             if (response.intCode == 200)
                 return true;
             Logger.log("ERROR: "+ response.varMessage+" [ "+GetIDFileFromTicket(content)+" ]");
             return false;
-        }
+        }        
         public string Sign(string thumbprint, string base64data)
         {
             CAdESCOM.CPStore store = new CAdESCOM.CPStore();

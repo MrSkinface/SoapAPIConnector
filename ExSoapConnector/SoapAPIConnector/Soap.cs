@@ -163,7 +163,7 @@ namespace APICon.soap
         
         private static object Action<Type>(string requestBody)
         {            
-            HttpWebRequest webRequest = WebRequest.CreateHttp(@"http://195.191.226.106:8080/soap");
+            HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(@"http://195.191.226.106:8080/soap");
             webRequest.Headers.Add(@"SOAP:Action");
             webRequest.ContentType = "text/xml; charset=UTF-8";
             webRequest.Accept = "text/xml";
