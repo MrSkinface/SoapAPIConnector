@@ -31,8 +31,12 @@ namespace APICon.conf
         public string DefaultPath { get; set; }
         [XmlElement(ElementName = "defaultArchive")]
         public string DefaultArchive { get; set; }
+        [XmlElement(ElementName = "defaultError")]
+        public string DefaultError { get; set; }
         [XmlElement(ElementName = "document")]
         public List<Document> Document { get; set; }
+        [XmlAttribute(AttributeName = "enable")]
+        public bool Enable { get; set; }
         [XmlAttribute(AttributeName = "isArchive")]
         public bool IsArchive { get; set; }
         [XmlAttribute(AttributeName = "useSubFoldersByDocType")]

@@ -29,6 +29,8 @@ namespace APICon.controller
 
     public class Controller : IController
     {
+        public static Dictionary<string, string> ticketTypes = new Dictionary<string, string>();        
+
         private Configuration conf;
         private string authToken;
         public Controller() { }
@@ -36,6 +38,10 @@ namespace APICon.controller
         {
             this.conf = conf;
             this.authToken= authorize();
+
+            ticketTypes.Add("DP_PDPOL", "ПодтверждениеДатыПоступления".Substring(0, 22));
+            ticketTypes.Add("DP_PDOTPR", "ПодтверждениеДатыОтправки".Substring(0, 22));
+            ticketTypes.Add("DP_UVUTOCH", "УведомлениеОбУточнении".Substring(0, 22));            
         }
 
         public bool archiveDoc(string name)
@@ -95,7 +101,7 @@ namespace APICon.controller
         public bool sendDocApi(string content, string sign, string docType)
         {
             APICon.rest.Request req = null;
-            if (docType.StartsWith("ON_SCHF"))
+            if (docType.StartsWith("ON_SCHF")|| docType.StartsWith("ON_KORSCHF"))
                 req = new DocumentUPDSendRequest(authToken, content, sign, docType);
             else
                 req = new DocumentSendRequest(authToken, content, sign, docType);            
@@ -148,7 +154,7 @@ namespace APICon.controller
             return new Ticket(name, body);
         }
         /**/
-        private string GetIDFileFromTicket(string ticketContent)
+        public string GetIDFileFromTicket(string ticketContent)
         {
             string xmlString = Utils.Base64Decode(ticketContent, "windows-1251");
             XmlDocument xml = new XmlDocument();
@@ -236,7 +242,8 @@ namespace APICon.controller
         {
             string timeFrom = DateTime.Now.AddDays(-60).ToString("yyyy-MM-dd HH:mm:ss");
             string timeTo = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-            GetTimeLineResponse response = (GetTimeLineResponse)Http.post<GetTimeLineResponse>("https://api-service.edi.su/Api/Dixy/TimeLine/GetTimeLine", new GetTimeLineRequest(authToken, timeFrom, timeTo));
+            string mode = "ESF_UPD";
+            GetTimeLineResponse response = (GetTimeLineResponse)Http.post<GetTimeLineResponse>("https://api-service.edi.su/Api/Dixy/TimeLine/GetTimeLine", new GetTimeLineRequest(authToken, timeFrom, timeTo, mode));
             List<Event> l = new List<Event>();
             foreach (Event e in response.timeline)
                 if (e.event_status.Contains("RECIEVED") && e.need_reply_reciept)
@@ -246,22 +253,29 @@ namespace APICon.controller
             foreach (Event e in l)
                 incomingEvents[i++] = e;
             return incomingEvents;
-        }
+        }        
         public Event[] getIncomingEvents(Configuration conf)
         {
             string timeFrom = DateTime.Now.AddDays(-60).ToString("yyyy-MM-dd HH:mm:ss");
             string timeTo = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-            GetTimeLineResponse response = (GetTimeLineResponse)Http.post<GetTimeLineResponse>("https://api-service.edi.su/Api/Dixy/TimeLine/GetTimeLine", new GetTimeLineRequest(authToken, timeFrom, timeTo));
+            string mode = "ESF_UPD";
+            GetTimeLineResponse response = (GetTimeLineResponse)Http.post<GetTimeLineResponse>("https://api-service.edi.su/Api/Dixy/TimeLine/GetTimeLine", new GetTimeLineRequest(authToken, timeFrom, timeTo, mode));
             List<Event> l = new List<Event>();
             /**/
             List<string> docs=new List<string>();
             foreach (Document d in conf.EDOTickets.Document)
-                docs.Add(d.Doctype);
+            {
+                string value;
+                if(ticketTypes.TryGetValue(d.Doctype, out value))
+                    docs.Add(value);
+            }            
             /**/
-            foreach (Event e in response.timeline)                
+            foreach (Event e in response.timeline)
                 if (e.event_status.Contains("RECIEVED") && e.need_reply_reciept)
-                    if(docs.Contains(getDocInfoByEvent(e).doc_type))
+                {
+                    if (docs.Contains(e.event_status.Substring(0, 22)))
                         l.Add(e);
+                }
             Event[] incomingEvents = new Event[l.Count];
             int i = 0;
             foreach (Event e in l)
@@ -271,7 +285,9 @@ namespace APICon.controller
         public ApiDocument getDocInfoByEvent(Event e)
         {
             GetDocInfoRequest req = new GetDocInfoRequest(authToken, e.document_id);
+            //Console.WriteLine(Utils.ToJson(req));
             GetDocInfoResponse resp = (GetDocInfoResponse)Http.post<GetDocInfoResponse>("https://api-service.edi.su/Api/Dixy/TimeLine/GetDocData", req);
+            //Console.WriteLine(Utils.ToJson(resp));
             if (resp.intCode == 200)
             {
                 GetContentResponse content = getDocumentContent(e);
@@ -294,6 +310,16 @@ namespace APICon.controller
         {
             GetContentResponse response = (GetContentResponse)Http.post<GetContentResponse>("https://api-service.edi.su/Api/Dixy/Content/GetBoth", new GetContentRequest(authToken, e.document_id));
             return response;
+        }
+        public GetContentResponse getUPDDocumentContent(Event e)
+        {
+            GetUPDContentResponse response = (GetUPDContentResponse)Http.post<GetUPDContentResponse>("https://api-service.edi.su/Api/Dixy/Content/GetDocWithSignContent", new GetContentRequest(authToken, e.document_id));
+            GetContentResponse contResp = new GetContentResponse();
+            contResp.intCode = response.intCode;
+            contResp.varMessage = response.varMessage;
+            contResp.body = response.body;
+            contResp.sign = response.sign[0].body;
+            return contResp;
         }
 
     }

@@ -200,6 +200,11 @@ namespace APICon.rest
         public string sign { get; set; }
         public string body { get; set; }
     }
+    public class GetUPDContentResponse : Response
+    {
+        public List<UPDSign> sign { get; set; }
+        public string body { get; set; }
+    }
     /*
      create tickets request / response
     */
@@ -418,8 +423,17 @@ namespace APICon.rest
             this.exchangeid = exchangeid;
             base.varToken = authToken;
         }
+        public GetTimeLineRequest(string authToken, string timefrom, string timeto, string mode)
+        {
+            this.timefrom = timefrom;
+            this.timeto = timeto;
+            this.mode = mode;
+            base.varToken = authToken;
+        }
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public string timefrom { get; set; }
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public string mode { get; set; }
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public string timeto { get; set; }
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]

@@ -89,13 +89,26 @@ namespace SoapAPIConnector
         public Program(Configuration conf)
         {
             this.conf = conf;
-            this.controller= new Controller(conf);            
+            this.controller= new Controller(conf);
             // TICKETS confirm (from 60 days till now)
-            processTickets();
-            // IN
-            processInbound();
-            // OUT
-            processOutbound();
+            if (conf.EDOTickets.Enable)
+                processTickets();
+            else
+                Logger.log("tickets disabled in [configuration.xml]");
+            // IN            
+            if (conf.Inbound.Enable)
+                processInbound();
+            else
+                Logger.log("inbound disabled in [configuration.xml]");
+            // OUT            
+            if (conf.Outbound.Enable)
+                processOutbound();
+            else
+                Logger.log("outbound disabled in [configuration.xml]");
+
+
+
+            //testTickets();
         }
         
         /**/        
@@ -122,14 +135,17 @@ namespace SoapAPIConnector
             {
                 eventsToConfirm = controller.getIncomingEvents(conf);
                 foreach (Event e in eventsToConfirm)
-                {
-                    ApiDocument apiDocInfo = controller.getDocInfoByEvent(e);
-                    string docType = apiDocInfo.doc_type;
+                {                    
+                    GetContentResponse content = controller.getDocumentContent(e);
+                    if(content.intCode!=200)
+                        content = controller.getUPDDocumentContent(e);
+                    string eventName = controller.GetIDFileFromTicket(content.body);
+                    string docType = eventName.Split('_')[0]+"_"+eventName.Split('_')[1];
                     Document docSettings = conf.GetCustomEDOTicketSettings(docType);
                     if (docSettings != null)
                     {
                         string thumbPrint = docSettings.Thumpprint != null ? docSettings.Thumpprint : conf.Thumpprint;
-                        Ticket ticket = controller.Ticket(thumbPrint, apiDocInfo.file_name);
+                        Ticket ticket = controller.Ticket(thumbPrint, eventName);
                         if (ticket != null)
                         {                            
                             string body = Utils.Base64Encode(ticket.body, "windows-1251");
@@ -139,8 +155,8 @@ namespace SoapAPIConnector
                                 /*
                                     saving incoming ticket
                                  */
-                                saveTicket(docSettings.LocalPath, apiDocInfo.file_name +".xml", Utils.Base64DecodeToBytes(apiDocInfo.file_body, "windows-1251"));
-                                saveTicket(docSettings.LocalPath, apiDocInfo.file_name + ".bin", Utils.StringToBytes(apiDocInfo.sign_body, "UTF-8"));
+                                saveTicket(docSettings.LocalPath, eventName + ".xml", Utils.Base64DecodeToBytes(content.body, "windows-1251"));
+                                saveTicket(docSettings.LocalPath, eventName + ".bin", Utils.StringToBytes(content.sign, "UTF-8"));
                                 /*
                                     saving outgoing ticket
                                  */
@@ -196,12 +212,21 @@ namespace SoapAPIConnector
                             string body = Utils.Base64Encode(File.ReadAllBytes(name), "windows-1251");
                             string sign = controller.Sign(thumbPrint, body);
                             if (controller.sendDocApi(body, sign, docType))
-                                Logger.log(Path.GetFileName(name) + " sent successfully.");
-                            if (conf.Outbound.IsArchive)
                             {
-                                if (moveDocToArc(Path.GetFileName(name), File.ReadAllBytes(name)))
+                                Logger.log(Path.GetFileName(name) + " sent successfully.");
+                                if (conf.Outbound.IsArchive)
+                                {
+                                    if (moveDocToArc(Path.GetFileName(name), File.ReadAllBytes(name)))
+                                        File.Delete(name);
+                                    if (moveDocToArc(Path.GetFileName(name).Replace(".xml", ".bin"), Utils.StringToBytes(sign, "UTF-8")))
+                                        File.Delete(name.Replace(".xml", ".bin"));
+                                }
+                            }
+                            else
+                            {
+                                if (moveDocToError(Path.GetFileName(name), File.ReadAllBytes(name)))
                                     File.Delete(name);
-                                if (moveDocToArc(Path.GetFileName(name).Replace(".xml", ".bin"), Utils.StringToBytes(sign, "UTF-8")))
+                                if (moveDocToError(Path.GetFileName(name).Replace(".xml", ".bin"), Utils.StringToBytes(sign, "UTF-8")))
                                     File.Delete(name.Replace(".xml", ".bin"));
                             }
 
@@ -210,10 +235,17 @@ namespace SoapAPIConnector
                         {
                             string body = Utils.Base64Encode(File.ReadAllBytes(name), "UTF-8");
                             if (controller.sendDoc(Path.GetFileName(name), body))
+                            {
                                 Logger.log(Path.GetFileName(name) + " sent successfully.");
-                            if (conf.Outbound.IsArchive)
-                            {                                    
-                                if(moveDocToArc(Path.GetFileName(name), (File.ReadAllBytes(name))))
+                                if (conf.Outbound.IsArchive)
+                                {
+                                    if (moveDocToArc(Path.GetFileName(name), (File.ReadAllBytes(name))))
+                                        File.Delete(name);
+                                }
+                            }
+                            else
+                            {
+                                if (moveDocToError(Path.GetFileName(name), (File.ReadAllBytes(name))))
                                     File.Delete(name);
                             }
                             
@@ -265,34 +297,35 @@ namespace SoapAPIConnector
         {
             try
             {
-                string docType = GetDocType(fileName);
-                Document docSettings = conf.GetCustomOutboundSettings(docType);
-                StringBuilder sb = new StringBuilder(conf.Outbound.DefaultArchive);
-                /*if (docSettings != null)
-                {
-                    foreach (string path in docSettings.LocalPath)
-                    {
-                        if (!Directory.Exists(path))
-                            Directory.CreateDirectory(path);
-                        File.WriteAllBytes(path + fileName, body);
-                        Logger.log(fileName + " moved to " + path);
-                    }
-                }
-                else
-                {
-                    if (conf.Outbound.SubFolders)
-                        sb.Append(docType).Append("\\");
-                    if (!Directory.Exists(sb.ToString()))
-                        Directory.CreateDirectory(sb.ToString());
-                    File.WriteAllBytes(sb.ToString() + fileName, body);
-                    Logger.log(fileName + " moved to " + sb.ToString());
-                }*/
+                string docType = GetDocType(fileName);                
+                StringBuilder sb = new StringBuilder(conf.Outbound.DefaultArchive);                
                 if (conf.Outbound.SubFolders)
                     sb.Append(docType).Append("\\");
                 if (!Directory.Exists(sb.ToString()))
                     Directory.CreateDirectory(sb.ToString());
                 File.WriteAllBytes(sb.ToString() + fileName, body);
                 Logger.log(fileName + " moved to " + sb.ToString());                
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.StackTrace);//debug only
+                Logger.log(ex.Message);
+                return false;
+            }
+        }
+        private bool moveDocToError(string fileName, byte[] body)
+        {
+            try
+            {
+                string docType = GetDocType(fileName);
+                StringBuilder sb = new StringBuilder(conf.Outbound.DefaultError);
+                if (conf.Outbound.SubFolders)
+                    sb.Append(docType).Append("\\");
+                if (!Directory.Exists(sb.ToString()))
+                    Directory.CreateDirectory(sb.ToString());
+                File.WriteAllBytes(sb.ToString() + fileName, body);
+                Logger.log(fileName + " moved to " + sb.ToString());
                 return true;
             }
             catch (Exception ex)
@@ -322,7 +355,7 @@ namespace SoapAPIConnector
         }
 
         static void Main(string[] args)
-        {
+        {            
             if (args.Length == 0)
             {
                 new Program();
@@ -342,7 +375,7 @@ namespace SoapAPIConnector
         }
         public static Configuration GetAppConfiguration(string appArg)
         {
-            string path = Path.GetFullPath(appArg);
+            string path = Path.GetFullPath(appArg);            
             byte[] xml = File.ReadAllBytes(path);
             return Utils.FromXml<Configuration>(Encoding.GetEncoding("UTF-8").GetString(xml));
         }
