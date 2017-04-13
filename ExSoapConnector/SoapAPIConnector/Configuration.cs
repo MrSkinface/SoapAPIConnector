@@ -7,6 +7,18 @@ using System.Xml.Serialization;
 
 namespace APICon.conf
 {
+    [XmlRoot(ElementName = "proxy")]
+    public class Proxy
+    {
+        [XmlAttribute(AttributeName = "enable")]
+        public bool Enable { get; set; }
+        [XmlElement(ElementName = "address")]
+        public string address { get; set; }        
+        [XmlElement(ElementName = "login")]
+        public string login { get; set; }
+        [XmlElement(ElementName = "password")]
+        public string password { get; set; }
+    }
     [XmlRoot(ElementName = "document")]
     public class Document
     {
@@ -62,6 +74,8 @@ namespace APICon.conf
         public InboundOutbound Outbound { get; set; }
         [XmlElement(ElementName = "EDOTickets")]
         public InboundOutbound EDOTickets { get; set; }
+        [XmlElement(ElementName = "proxy")]
+        public Proxy proxy { get; set; }
 
         public Document GetCustomInboundSettings(string docType)
         {

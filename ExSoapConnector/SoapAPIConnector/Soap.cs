@@ -8,6 +8,7 @@ using System.Net;
 using System.Xml;
 using System.IO;
 using APICon.Util;
+using SoapAPIConnector;
 
 namespace APICon.soap
 {
@@ -164,6 +165,13 @@ namespace APICon.soap
         private static object Action<Type>(string requestBody)
         {            
             HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(@"http://195.191.226.106:8080/soap");
+            if (Program.conf.proxy.Enable)
+            {               
+                WebProxy proxy = new WebProxy();                
+                Uri proxyUri = new Uri(Program.conf.proxy.address);
+                proxy.Credentials = new NetworkCredential(Program.conf.proxy.login, Program.conf.proxy.password);
+                webRequest.Proxy = proxy;
+            }
             webRequest.Headers.Add(@"SOAP:Action");
             webRequest.ContentType = "text/xml; charset=UTF-8";
             webRequest.Accept = "text/xml";

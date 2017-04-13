@@ -18,7 +18,7 @@ namespace SoapAPIConnector
 {
     class Program
     {
-        private Configuration conf;
+        public static Configuration conf;
         private Controller controller;
 
         public Program()
@@ -32,6 +32,7 @@ namespace SoapAPIConnector
         }
         public Program(String[] args)
         {
+            Program.conf=GetAppConfiguration("configuration.xml");
             controller = new Controller();
             switch (args[0])
             {
@@ -67,15 +68,15 @@ namespace SoapAPIConnector
                     }
                     break;
                 case "-testrest":
-                    AuthorizeResponse response = (AuthorizeResponse)Http.post<AuthorizeResponse>("https://api-service.edi.su/Api/Dixy/Index/Authorize", new AuthorizeRequest("login", "pass"));
+                    AuthorizeResponse response = (AuthorizeResponse)Http.post<AuthorizeResponse>("https://api-service.edi.su/Api/Dixy/Index/Authorize", new AuthorizeRequest(conf.Login, conf.Api_pass));
                     if(response!=null)
                         Console.WriteLine("rest O.K.");
                     break;
                 case "-testsoap":
                     GetListRequest req = new GetListRequest();
                     req.user = new User();
-                    req.user.login = "Login";
-                    req.user.pass = Utils.GetMD5String("pass");
+                    req.user.login = conf.Login;
+                    req.user.pass = Utils.GetMD5String(conf.Soap_pass);
                     GetListResponse resp = (GetListResponse)Soap.GetList<GetListResponse>(req);
                     if (resp != null)
                         Console.WriteLine("soap O.K.");
@@ -88,8 +89,8 @@ namespace SoapAPIConnector
         }
         public Program(Configuration conf)
         {
-            this.conf = conf;
-            this.controller= new Controller(conf);
+            Program.conf = conf;
+            this.controller= new Controller(Program.conf);
             // TICKETS confirm (from 60 days till now)
             if (conf.EDOTickets.Enable)
                 processTickets();
@@ -105,10 +106,6 @@ namespace SoapAPIConnector
                 processOutbound();
             else
                 Logger.log("outbound disabled in [configuration.xml]");
-
-
-
-            //testTickets();
         }
         
         /**/        

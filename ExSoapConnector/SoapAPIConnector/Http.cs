@@ -7,6 +7,7 @@ using APICon.Util;
 using System.Net;
 using System.IO;
 using System.Security.Cryptography.X509Certificates;
+using SoapAPIConnector;
 
 namespace APICon.rest
 {
@@ -26,7 +27,13 @@ namespace APICon.rest
 
             HttpWebRequest post = (HttpWebRequest) WebRequest.Create(url);
             ServicePointManager.ServerCertificateValidationCallback += (sender, cert, chain, error) => true;
-            //ServicePointManager.CertificatePolicy = new MyPolicy();
+            if (Program.conf.proxy.Enable)
+            {                
+                WebProxy proxy = new WebProxy();               
+                Uri proxyUri = new Uri(Program.conf.proxy.address);
+                proxy.Credentials = new NetworkCredential(Program.conf.proxy.login, Program.conf.proxy.password);
+                post.Proxy = proxy;
+            }
             post.KeepAlive = false;
             post.ProtocolVersion = HttpVersion.Version10;
             post.Method = "POST";
