@@ -92,7 +92,7 @@ namespace SoapAPIConnector
             Program.conf = conf;
             this.controller= new Controller(Program.conf);
             // TICKETS confirm (from 60 days till now)
-            /*if (conf.EDOTickets.Enable)
+            if (conf.EDOTickets.Enable)
                 processTickets();
             else
                 Logger.log("tickets disabled in [configuration.xml]");
@@ -105,9 +105,7 @@ namespace SoapAPIConnector
             if (conf.Outbound.Enable)
                 processOutbound();
             else
-                Logger.log("outbound disabled in [configuration.xml]");*/
-
-            testTickets();
+                Logger.log("outbound disabled in [configuration.xml]");
         }
         
         /**/        
