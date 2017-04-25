@@ -430,6 +430,11 @@ namespace APICon.rest
             this.mode = mode;
             base.varToken = authToken;
         }
+        public GetTimeLineRequest(string authToken)
+        {
+            this.mode = "ESF_UPD";
+            base.varToken = authToken;
+        }
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public string timefrom { get; set; }
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
@@ -438,6 +443,10 @@ namespace APICon.rest
         public string timeto { get; set; }
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public string exchangeid { get; set; }
+    }
+    public class GetUnreadTimeLineResponse : GetTimeLineResponse
+    {
+        public int total_events_count { get; set; }
     }
     public class GetTimeLineResponse : Response
     {
@@ -467,6 +476,17 @@ namespace APICon.rest
                 + "\n\tsender_id: " + sender_id;
         }
     }
+    public class MarkEventReadRequest : Request
+    {
+        public string event_id { get; set; }
+        public MarkEventReadRequest() { }
+        public MarkEventReadRequest(string authToken, string event_id)
+        {
+            this.event_id = event_id;
+            base.varToken = authToken;
+        }
+    }
+    public class MarkEventReadResponse : Response { }
     public class GetDocInfoRequest : Request
     {
         public string identifier { get; set; }

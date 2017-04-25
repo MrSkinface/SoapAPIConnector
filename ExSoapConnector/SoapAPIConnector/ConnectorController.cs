@@ -282,6 +282,22 @@ namespace APICon.controller
                 incomingEvents[i++] = e;
             return incomingEvents;
         }
+        public GetUnreadTimeLineResponse getUnreadEvents()
+        {
+            GetUnreadTimeLineResponse response = (GetUnreadTimeLineResponse)Http.post<GetUnreadTimeLineResponse>("https://api-service.edi.su/Api/Dixy/TimeLine/GetUnreadTimeLine", new GetTimeLineRequest(authToken));
+            return response;
+        }
+        public bool MarkEventRead(string event_id)
+        {
+            MarkEventReadRequest request=new MarkEventReadRequest(authToken, event_id);
+            MarkEventReadResponse response = (MarkEventReadResponse)Http.post<MarkEventReadResponse>("https://api-service.edi.su/Api/Dixy/TimeLine/MarkEventRead", request);
+            if (response.intCode == 200)
+            {
+                Logger.log("event id [" + event_id + "] marked as [READ] .");
+                return true;
+            }
+            return false;
+        }
         public ApiDocument getDocInfoByEvent(Event e)
         {
             GetDocInfoRequest req = new GetDocInfoRequest(authToken, e.document_id);

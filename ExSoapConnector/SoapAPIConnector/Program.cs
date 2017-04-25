@@ -91,7 +91,7 @@ namespace SoapAPIConnector
         {
             Program.conf = conf;
             this.controller= new Controller(Program.conf);
-            // TICKETS confirm (from 60 days till now)
+            // TICKETS confirm (only UnRead events: mark as read after confirm)
             if (conf.EDOTickets.Enable)
                 processTickets();
             else
@@ -106,68 +106,112 @@ namespace SoapAPIConnector
                 processOutbound();
             else
                 Logger.log("outbound disabled in [configuration.xml]");
+
+            //testTickets();
+            //testCrypto();
         }
         
         /**/        
         public void testCrypto()
         {
             foreach (ExCert cert in controller.GetCertificates())
+            {
+                Console.WriteLine("cert info :");
                 Console.WriteLine(cert.ToString());
+                Console.WriteLine("testing sign ...");
+                String sign = null;
+                String base64data = Utils.Base64DecodeToString(Encoding.GetEncoding("UTF-8").GetBytes("somedata"), "UTF-8");
+                try
+                {
+                    sign = controller.Sign(cert.Thumbprint, base64data);
+                    if (sign != null)
+                        Console.WriteLine("signing O.K.");
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
+                }
+            }
+                
         }
-        public void testTickets()
+        public void processTickets()
         {
-            Console.WriteLine(controller.getIncomingEvents(conf).Length);
-            foreach (Event e in controller.getIncomingEvents(conf))
-                Console.WriteLine(e.ToString());
+            /**/
+            List<string> docs = new List<string>();
+            foreach (Document d in conf.EDOTickets.Document)
+            {
+                string value;
+                if (Controller.ticketTypes.TryGetValue(d.Doctype, out value))
+                    docs.Add(value);
+            }            
+            /**/
+
+            int count = controller.getUnreadEvents().total_events_count;
+            Event[] events;            
+            for (int i=0;i<=(count / 100); i++)
+            {                
+                events = controller.getUnreadEvents().timeline;
+                foreach (Event e in events)
+                {
+                    if(e.event_status.Contains("NEW") || e.event_status.Contains("ERROR") || e.event_status.Length<22)
+                        controller.MarkEventRead(e.event_id);
+                    else if(!e.need_reply_reciept)
+                        controller.MarkEventRead(e.event_id);
+                    else if(!docs.Contains(e.event_status.Substring(0, 22)))
+                        controller.MarkEventRead(e.event_id);
+                    else if (signAndConfirmEvent(e))
+                            controller.MarkEventRead(e.event_id);
+                }
+                events = null;
+            }
         }
         /**/
 
 
 
 
-        public void processTickets()
-        {
-            Event[] eventsToConfirm;
+        public bool signAndConfirmEvent(Event e)
+        {            
             try
             {
-                eventsToConfirm = controller.getIncomingEvents(conf);
-                foreach (Event e in eventsToConfirm)
-                {                    
-                    GetContentResponse content = controller.getDocumentContent(e);
-                    if(content.intCode!=200)
-                        content = controller.getUPDDocumentContent(e);
-                    string eventName = controller.GetIDFileFromTicket(content.body);
-                    string docType = eventName.Split('_')[0]+"_"+eventName.Split('_')[1];
-                    Document docSettings = conf.GetCustomEDOTicketSettings(docType);
-                    if (docSettings != null)
+                Console.WriteLine(e.document_id);
+                GetContentResponse content = controller.getDocumentContent(e);
+                if (content.intCode != 200)
+                    content = controller.getUPDDocumentContent(e);
+                string eventName = controller.GetIDFileFromTicket(content.body);
+                string docType = eventName.Split('_')[0] + "_" + eventName.Split('_')[1];
+                Document docSettings = conf.GetCustomEDOTicketSettings(docType);
+                if (docSettings != null)
+                {
+                    string thumbPrint = docSettings.Thumpprint != null ? docSettings.Thumpprint : conf.Thumpprint;
+                    Ticket ticket = controller.Ticket(thumbPrint, eventName);
+                    if (ticket != null)
                     {
-                        string thumbPrint = docSettings.Thumpprint != null ? docSettings.Thumpprint : conf.Thumpprint;
-                        Ticket ticket = controller.Ticket(thumbPrint, eventName);
-                        if (ticket != null)
-                        {                            
-                            string body = Utils.Base64Encode(ticket.body, "windows-1251");
-                            string sign = controller.Sign(thumbPrint, body);
-                            if (controller.confirmEvent(e, body, sign))
-                            {
-                                /*
-                                    saving incoming ticket
-                                 */
-                                saveTicket(docSettings.LocalPath, eventName + ".xml", Utils.Base64DecodeToBytes(content.body, "windows-1251"));
-                                saveTicket(docSettings.LocalPath, eventName + ".bin", Utils.StringToBytes(content.sign, "UTF-8"));
-                                /*
-                                    saving outgoing ticket
-                                 */
-                                saveTicket(docSettings.TicketPath, ticket.fileName, ticket.body);
-                                saveTicket(docSettings.TicketPath, ticket.fileName.Replace(".xml", ".bin"), Utils.StringToBytes(sign, "UTF-8")); 
-                            }
+                        string body = Utils.Base64Encode(ticket.body, "windows-1251");
+                        string sign = controller.Sign(thumbPrint, body);
+                        if (controller.confirmEvent(e, body, sign))
+                        {
+                            /*
+                                saving incoming ticket
+                             */
+                            saveTicket(docSettings.LocalPath, eventName + ".xml", Utils.Base64DecodeToBytes(content.body, "windows-1251"));
+                            saveTicket(docSettings.LocalPath, eventName + ".bin", Utils.StringToBytes(content.sign, "UTF-8"));
+                            /*
+                                saving outgoing ticket
+                             */
+                            saveTicket(docSettings.TicketPath, ticket.fileName, ticket.body);
+                            saveTicket(docSettings.TicketPath, ticket.fileName.Replace(".xml", ".bin"), Utils.StringToBytes(sign, "UTF-8"));
+                            
                         }
                     }
                 }
+                return true;
             }
             catch (Exception ex)
-            {
+            {                
                 Console.WriteLine(ex.StackTrace);
                 Logger.log(ex.Message);
+                return false;
             }
         }
         public void processInbound()
