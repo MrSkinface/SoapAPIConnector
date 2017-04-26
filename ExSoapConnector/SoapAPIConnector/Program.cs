@@ -93,7 +93,12 @@ namespace SoapAPIConnector
             this.controller= new Controller(Program.conf);
             // TICKETS confirm (only UnRead events: mark as read after confirm)
             if (conf.EDOTickets.Enable)
-                processTickets();
+            {
+                if (conf.EDOTickets.mode == "unread")
+                    processTicketsUnread();
+                else
+                    processTicketsTimeLine();
+            }
             else
                 Logger.log("tickets disabled in [configuration.xml]");
             // IN            
@@ -107,6 +112,9 @@ namespace SoapAPIConnector
             else
                 Logger.log("outbound disabled in [configuration.xml]");
 
+
+
+            
             //testTickets();
             //testCrypto();
         }
@@ -134,7 +142,22 @@ namespace SoapAPIConnector
             }
                 
         }
-        public void processTickets()
+        public void testTickets()
+        {
+            /*Event[] timelineevents= controller.getIncomingEvents();
+            Console.WriteLine("timelineevents: " + timelineevents.Length);
+            Event[] unreadevents= controller.getUnreadEvents().timeline;
+            Console.WriteLine("unreadevents: " + unreadevents.Length);*/
+        }
+        /**/
+        public void processTicketsTimeLine()
+        {
+            Event[] events= controller.getIncomingEvents();
+            foreach (Event e in events)
+                if (signAndConfirmEvent(e))
+                    controller.MarkEventRead(e.event_id);
+        }
+        public void processTicketsUnread()
         {
             /**/
             List<string> docs = new List<string>();
@@ -174,7 +197,7 @@ namespace SoapAPIConnector
         {            
             try
             {
-                Console.WriteLine(e.document_id);
+                //Console.WriteLine(e.document_id);
                 GetContentResponse content = controller.getDocumentContent(e);
                 if (content.intCode != 200)
                     content = controller.getUPDDocumentContent(e);
@@ -409,7 +432,7 @@ namespace SoapAPIConnector
             {
                 Configuration conf = GetAppConfiguration(args[0]);
                 Logger.loadConfig(conf);
-                Logger.log("start");
+                Logger.log("start");                
                 new Program(conf);
                 Logger.log("end");
             }            

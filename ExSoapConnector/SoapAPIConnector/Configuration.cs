@@ -39,6 +39,12 @@ namespace APICon.conf
     [XmlRoot(ElementName = "inbound")]
     public class InboundOutbound
     {
+        /**/
+        [XmlAttribute(AttributeName = "mode")]
+        public string mode { get; set; }
+        [XmlElement(ElementName = "timeline")]
+        public TicketsTimeLine timeline { get; set; }
+        /**/
         [XmlElement(ElementName = "defaultPath")]
         public string DefaultPath { get; set; }
         [XmlElement(ElementName = "defaultArchive")]
@@ -53,7 +59,17 @@ namespace APICon.conf
         public bool IsArchive { get; set; }
         [XmlAttribute(AttributeName = "useSubFoldersByDocType")]
         public bool SubFolders { get; set; }
-    }    
+    }
+    /**/
+    [XmlRoot(ElementName = "timeline")]
+    public class TicketsTimeLine
+    {
+        [XmlElement(ElementName = "fromMinusDays")]
+        public double fromMinusDays { get; set; }
+        [XmlElement(ElementName = "toPlusDays")]
+        public double toPlusDays { get; set; }
+    }
+    /**/
 
     [XmlRoot(ElementName = "configuration")]
     public class Configuration

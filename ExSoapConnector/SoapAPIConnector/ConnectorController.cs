@@ -238,7 +238,7 @@ namespace APICon.controller
         /*
             for events confirm 
         */
-        public Event[] getIncomingEvents()
+        /*public Event[] getIncomingEvents()
         {
             string timeFrom = DateTime.Now.AddDays(-60).ToString("yyyy-MM-dd HH:mm:ss");
             string timeTo = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
@@ -253,11 +253,11 @@ namespace APICon.controller
             foreach (Event e in l)
                 incomingEvents[i++] = e;
             return incomingEvents;
-        }        
-        public Event[] getIncomingEvents(Configuration conf)
+        } */       
+        public Event[] getIncomingEvents()
         {
-            string timeFrom = DateTime.Now.AddDays(-60).ToString("yyyy-MM-dd HH:mm:ss");
-            string timeTo = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            string timeFrom = DateTime.Now.AddDays(0- conf.EDOTickets.timeline.fromMinusDays).ToString("yyyy-MM-dd HH:mm:ss");
+            string timeTo = DateTime.Now.AddDays(conf.EDOTickets.timeline.toPlusDays).ToString("yyyy-MM-dd HH:mm:ss");
             string mode = "ESF_UPD";
             GetTimeLineResponse response = (GetTimeLineResponse)Http.post<GetTimeLineResponse>("https://api-service.edi.su/Api/Dixy/TimeLine/GetTimeLine", new GetTimeLineRequest(authToken, timeFrom, timeTo, mode));
             List<Event> l = new List<Event>();
@@ -271,7 +271,7 @@ namespace APICon.controller
             }            
             /**/
             foreach (Event e in response.timeline)
-                if (e.event_status.Contains("RECIEVED") && e.need_reply_reciept)
+                if (e.event_status.Contains("RECIEVED") && e.need_reply_reciept && e.event_status.Length>=22)
                 {
                     if (docs.Contains(e.event_status.Substring(0, 22)))
                         l.Add(e);
