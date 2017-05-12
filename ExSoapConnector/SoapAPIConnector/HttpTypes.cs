@@ -78,8 +78,11 @@ namespace APICon.rest
             var map = new Dictionary<string, string>();
             foreach (string part in subjectName.Split(','))
             {
-                string[] parts = part.Split('=');
-                map.Add(parts[0].TrimStart(' '), parts[1].TrimStart('0'));
+                if (part.Contains("="))
+                {
+                    string[] parts = part.Split('=');
+                    map.Add(parts[0].TrimStart(' '), parts[1].TrimStart('0'));
+                }                
             }
             return map;
         }

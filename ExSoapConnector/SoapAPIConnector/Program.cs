@@ -96,8 +96,10 @@ namespace SoapAPIConnector
             {
                 if (conf.EDOTickets.mode == "unread")
                     processTicketsUnread();
-                else
+                else if (conf.EDOTickets.mode == "timeline")
                     processTicketsTimeLine();
+                else if (conf.EDOTickets.mode == "soap")
+                    processTicketsSoap();
             }
             else
                 Logger.log("tickets disabled in [configuration.xml]");
@@ -114,7 +116,7 @@ namespace SoapAPIConnector
 
 
 
-            
+
             //testTickets();
             //testCrypto();
         }
@@ -124,38 +126,75 @@ namespace SoapAPIConnector
         {
             foreach (ExCert cert in controller.GetCertificates())
             {
-                Console.WriteLine("cert info :");
-                Console.WriteLine(cert.ToString());
-                Console.WriteLine("testing sign ...");
-                String sign = null;
-                String base64data = Utils.Base64DecodeToString(Encoding.GetEncoding("UTF-8").GetBytes("somedata"), "UTF-8");
-                try
+                if (cert.Thumbprint == "012BC4A14C0C00777E74B6FEFE043C66CA758B86")
                 {
-                    sign = controller.Sign(cert.Thumbprint, base64data);
-                    if (sign != null)
-                        Console.WriteLine("signing O.K.");
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.Message);
+                    Console.WriteLine("cert info :");
+                    Console.WriteLine(cert.ToString());
+                    ExSigner signer = new ExSigner(cert);
+                    Console.WriteLine("signer info :");
+                    Console.WriteLine(signer.ToString());
+
+                    /*Console.WriteLine("testing sign ...");
+                    String sign = null;
+                    String base64data = Utils.Base64DecodeToString(Encoding.GetEncoding("UTF-8").GetBytes("somedata"), "UTF-8");
+                    try
+                    {
+                        sign = controller.Sign(cert.Thumbprint, base64data);
+                        if (sign != null)
+                            Console.WriteLine("signing O.K.");
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message);
+                    }*/
                 }
             }
                 
         }
         public void testTickets()
         {
-            /*Event[] timelineevents= controller.getIncomingEvents();
-            Console.WriteLine("timelineevents: " + timelineevents.Length);
-            Event[] unreadevents= controller.getUnreadEvents().timeline;
-            Console.WriteLine("unreadevents: " + unreadevents.Length);*/
+            /*if (conf.EDOTickets.mode == "unread")
+                Console.WriteLine("processTicketsUnread();"); 
+            else if (conf.EDOTickets.mode == "timeline")
+                Console.WriteLine("processTicketsTimeLine();");            
+            else if (conf.EDOTickets.mode == "soap")
+                Console.WriteLine("processTicketsSoap();");   */         
         }
         /**/
-        public void processTicketsTimeLine()
+        public void processTicketsSoap()
         {
-            Event[] events= controller.getIncomingEvents();
-            foreach (Event e in events)
+            List<string> names = controller.getList();
+
+            List<string> docs = new List<string>();
+            foreach (Document d in conf.EDOTickets.Document)
+                docs.Add(d.Doctype);
+
+            List<Event> evnts = new List<Event>();
+            foreach (string name in names)
+            {
+                if (name.EndsWith(".xml"))
+                    if (docs.Contains(name.Split('_')[0] + "_" + name.Split('_')[1]))
+                    {
+                        Event e = new Event();
+                        e.document_id = name.Split('_')[5].Replace(".xml", "");
+                        evnts.Add(e);
+                    }
+            }
+            foreach (Event e in evnts)
                 if (signAndConfirmEvent(e))
-                    controller.MarkEventRead(e.event_id);
+                {
+                    foreach (string name in names)
+                        if (name.Contains(e.document_id))
+                            if (controller.archiveDoc(name))
+                                Logger.log(name + " removed from server .");
+                }
+        }
+        public void processTicketsTimeLine()
+        {            
+            Event[] events= controller.getIncomingEvents();            
+            foreach (Event e in events)                
+            if (signAndConfirmEvent(e))
+                controller.MarkEventRead(e.event_id);
         }
         public void processTicketsUnread()
         {

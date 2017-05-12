@@ -24,5 +24,13 @@ namespace APICon.logger
             File.AppendAllText(sb.ToString(), textToLog);
             Console.Write(textToLog);
         }
+        public static void error(string message)
+        {
+            StringBuilder sb = new StringBuilder(logPath);
+            sb.Append(DateTime.Now.ToString("yyyy-MM-dd")).Append("_error.txt");
+            string textToLog = "[" + DateTime.Now.ToString() + "]" + message + "\n";
+            File.AppendAllText(sb.ToString(), textToLog);
+            Console.Write(textToLog);
+        }
     }
 }
