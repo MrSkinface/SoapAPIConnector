@@ -109,7 +109,7 @@ namespace SoapAPIConnector
             else
                 Logger.log("inbound disabled in [configuration.xml]");
             // OUT            
-            if (conf.Outbound.Enable)
+            if (conf.Outbound.Enable)                
                 processOutbound();
             else
                 Logger.log("outbound disabled in [configuration.xml]");
@@ -117,48 +117,40 @@ namespace SoapAPIConnector
 
 
 
-            //testTickets();
-            //testCrypto();
+            //debug();
         }
-        
-        /**/        
+
+        /**/
+        public void debug()
+        {
+            /*List<string> outArcPaths = new List<string>();
+            foreach (Document confDoc in conf.Outbound.Document)
+                foreach (string path in confDoc.LocalArchive)
+                    outArcPaths.Add(path);
+            foreach (string name in outArcPaths)
+                Console.WriteLine(name);*/
+        }
+        /**/
         public void testCrypto()
         {
             foreach (ExCert cert in controller.GetCertificates())
             {
-                if (cert.Thumbprint == "012BC4A14C0C00777E74B6FEFE043C66CA758B86")
+                Console.WriteLine("cert info :");
+                Console.WriteLine(cert.ToString());
+                Console.WriteLine("testing sign ...");
+                String sign = null;
+                String base64data = Utils.Base64DecodeToString(Encoding.GetEncoding("UTF-8").GetBytes("somedata"), "UTF-8");
+                try
                 {
-                    Console.WriteLine("cert info :");
-                    Console.WriteLine(cert.ToString());
-                    ExSigner signer = new ExSigner(cert);
-                    Console.WriteLine("signer info :");
-                    Console.WriteLine(signer.ToString());
-
-                    /*Console.WriteLine("testing sign ...");
-                    String sign = null;
-                    String base64data = Utils.Base64DecodeToString(Encoding.GetEncoding("UTF-8").GetBytes("somedata"), "UTF-8");
-                    try
-                    {
-                        sign = controller.Sign(cert.Thumbprint, base64data);
-                        if (sign != null)
-                            Console.WriteLine("signing O.K.");
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e.Message);
-                    }*/
+                    sign = controller.Sign(cert.Thumbprint, base64data);
+                    if (sign != null)
+                        Console.WriteLine("signing O.K.");
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
                 }
             }
-                
-        }
-        public void testTickets()
-        {
-            /*if (conf.EDOTickets.mode == "unread")
-                Console.WriteLine("processTicketsUnread();"); 
-            else if (conf.EDOTickets.mode == "timeline")
-                Console.WriteLine("processTicketsTimeLine();");            
-            else if (conf.EDOTickets.mode == "soap")
-                Console.WriteLine("processTicketsSoap();");   */         
         }
         /**/
         public void processTicketsSoap()
@@ -278,33 +270,43 @@ namespace SoapAPIConnector
         }
         public void processInbound()
         {
+            List<string> docs = new List<string>();
+            foreach (Document d in conf.Inbound.Document)
+                docs.Add(d.Doctype);
+
             List<string> inbound;
-            try
-            {
+           
                 inbound = controller.getList();
                 foreach (string name in inbound)
                 {
-                    byte[] docBody = controller.getDoc(name);
-                    if (docBody != null)
-                        if (saveDoc(name, docBody))
-                            if(conf.Inbound.IsArchive)
-                                if (controller.archiveDoc(name))
-                                    Logger.log(name + " removed from server .");
-                }              
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.StackTrace);//debug only
-                Logger.log(ex.Message);                
-            }
+                if((docs.Contains(name.Split('_')[0])) ||(docs.Contains(name.Split('_')[0]+"_"+ name.Split('_')[1])))
+                    try
+                    {
+                        byte[] docBody = controller.getDoc(name);
+                        if (docBody != null)
+                            if (saveDoc(name, docBody))
+                                if(conf.Inbound.IsArchive)
+                                    if (controller.archiveDoc(name))
+                                        Logger.log(name + " removed from server .");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.StackTrace);//debug only
+                        Logger.log(ex.Message);
+                    }
+                }            
         }
         public void processOutbound()
         {
-            string[] outbound;
-            try
-            {
-                outbound = Directory.GetFiles(conf.Outbound.DefaultPath);
+            List<string> outbound;
+            outbound = Directory.GetFiles(conf.Outbound.DefaultPath).ToList();
+            foreach (Document confDoc in conf.Outbound.Document)
+                foreach (string path in confDoc.LocalPath)
+                    outbound.AddRange(Directory.GetFiles(path));            
+                
                 foreach (string name in outbound)
+                {
+                try
                 {
                     string docType = GetDocType(Path.GetFileName(name));                    
                     Document docSettings = conf.GetCustomOutboundSettings(docType);
@@ -323,9 +325,9 @@ namespace SoapAPIConnector
                                     Logger.log(Path.GetFileName(name) + " sent successfully.");
                                     if (conf.Outbound.IsArchive)
                                     {
-                                        if ((moveDocToArc(Path.GetFileName(name), (File.ReadAllBytes(name))))
+                                        if ((moveDocToArc(Path.GetFileName(name), (File.ReadAllBytes(name)), docSettings))
                                             &&
-                                            (moveDocToArc(Path.GetFileName(name).Replace(".xml", ".bin"), Utils.StringToBytes(sign, "UTF-8"))))
+                                            (moveDocToArc(Path.GetFileName(name).Replace(".xml", ".bin"), Utils.StringToBytes(sign, "UTF-8"), docSettings)))
                                             File.Delete(name);
                                     }
                                 }
@@ -337,9 +339,9 @@ namespace SoapAPIConnector
                                     Logger.log(Path.GetFileName(name) + " sent successfully.");
                                     if (conf.Outbound.IsArchive)
                                     {
-                                        if (moveDocToArc(Path.GetFileName(name), File.ReadAllBytes(name)))
+                                        if (moveDocToArc(Path.GetFileName(name), File.ReadAllBytes(name), docSettings))
                                             File.Delete(name);
-                                        if (moveDocToArc(Path.GetFileName(name).Replace(".xml", ".bin"), Utils.StringToBytes(sign, "UTF-8")))
+                                        if (moveDocToArc(Path.GetFileName(name).Replace(".xml", ".bin"), Utils.StringToBytes(sign, "UTF-8"), docSettings))
                                             File.Delete(name.Replace(".xml", ".bin"));
                                     }
                                 }
@@ -361,7 +363,7 @@ namespace SoapAPIConnector
                                 Logger.log(Path.GetFileName(name) + " sent successfully.");
                                 if (conf.Outbound.IsArchive)
                                 {
-                                    if (moveDocToArc(Path.GetFileName(name), (File.ReadAllBytes(name))))
+                                    if (moveDocToArc(Path.GetFileName(name), (File.ReadAllBytes(name)), docSettings))
                                         File.Delete(name);
                                 }
                             }
@@ -373,20 +375,23 @@ namespace SoapAPIConnector
                             
                         }
                 }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.StackTrace);//debug only
+                    Logger.log(ex.Message);
+                }
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.StackTrace);//debug only
-                Logger.log(ex.Message);
-            }
+            
         }
         private bool saveDoc(string fileName,byte[]body)
         {
             try
             {
                 string docType = GetDocType(fileName);
+                //Console.WriteLine("fileName: " + fileName+ "; docType: "+ docType);                
                 Document docSettings = conf.GetCustomInboundSettings(docType);
                 StringBuilder sb = new StringBuilder(conf.Inbound.DefaultPath);
+                //Console.WriteLine("docSettings: " + docSettings);
                 if (docSettings != null)
                 {
                     foreach (string path in docSettings.LocalPath)
@@ -403,6 +408,7 @@ namespace SoapAPIConnector
                         sb.Append(docType).Append("\\");
                     if (!Directory.Exists(sb.ToString()))
                         Directory.CreateDirectory(sb.ToString());
+                    //Console.WriteLine("sb.ToString(): " + sb.ToString());
                     File.WriteAllBytes(sb.ToString() + fileName, body);
                     Logger.log(fileName + " saved in " + sb.ToString());
                 }
@@ -415,8 +421,34 @@ namespace SoapAPIConnector
                 return false;
             }              
         }
-        private bool moveDocToArc(string fileName, byte[] body)
+        private bool moveDocToArc(string fileName, byte[] body, Document doc)
         {
+            if (doc.LocalArchive != null)
+            {
+                foreach (string path in doc.LocalArchive)
+                {
+                    StringBuilder sb = new StringBuilder(path);                    
+                    if (!Directory.Exists(sb.ToString()))
+                        Directory.CreateDirectory(sb.ToString());
+                    try
+                    {
+                        File.WriteAllBytes(sb.Append(fileName).ToString(), body);
+                        Logger.log(fileName + " moved to " + sb.ToString());
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.StackTrace);//debug only
+                        Logger.log(ex.Message);
+                        return false;
+                    }
+                }
+                return true;
+            }
+            else
+                return moveDocToArc(fileName,body);
+        }
+        private bool moveDocToArc(string fileName, byte[] body)
+        {           
             try
             {
                 string docType = GetDocType(fileName);                

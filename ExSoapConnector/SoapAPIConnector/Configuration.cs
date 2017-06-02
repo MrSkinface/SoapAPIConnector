@@ -26,6 +26,8 @@ namespace APICon.conf
         public string Doctype { get; set; }
         [XmlElement(ElementName = "localPath")]
         public List<string> LocalPath { get; set; }
+        [XmlElement(ElementName = "localArchive")]
+        public List<string> LocalArchive { get; set; }
         [XmlElement(ElementName = "ticketPath")]
         public List<string> TicketPath { get; set; }
         [XmlElement(ElementName = "thumpprint")]
