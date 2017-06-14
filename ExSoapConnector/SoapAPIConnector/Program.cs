@@ -276,16 +276,17 @@ namespace SoapAPIConnector
 
             List<string> inbound;
            
-                inbound = controller.getList();
-                foreach (string name in inbound)
+            inbound = controller.getList();
+            foreach (string name in inbound)
+            {                
+                if (conf.Inbound.DownloadALL || (docs.Contains(name.Split('_')[0])) || (docs.Contains(name.Split('_')[0] + "_" + name.Split('_')[1])))
                 {
-                if((docs.Contains(name.Split('_')[0])) ||(docs.Contains(name.Split('_')[0]+"_"+ name.Split('_')[1])))
                     try
                     {
                         byte[] docBody = controller.getDoc(name);
                         if (docBody != null)
                             if (saveDoc(name, docBody))
-                                if(conf.Inbound.IsArchive)
+                                if (conf.Inbound.IsArchive)
                                     if (controller.archiveDoc(name))
                                         Logger.log(name + " removed from server .");
                     }
@@ -294,7 +295,8 @@ namespace SoapAPIConnector
                         Console.WriteLine(ex.StackTrace);//debug only
                         Logger.log(ex.Message);
                     }
-                }            
+                }               
+            }            
         }
         public void processOutbound()
         {
@@ -422,8 +424,8 @@ namespace SoapAPIConnector
             }              
         }
         private bool moveDocToArc(string fileName, byte[] body, Document doc)
-        {
-            if (doc.LocalArchive != null)
+        {            
+            if (doc.LocalArchive.Count != 0)
             {
                 foreach (string path in doc.LocalArchive)
                 {

@@ -61,6 +61,8 @@ namespace APICon.conf
         public bool IsArchive { get; set; }
         [XmlAttribute(AttributeName = "useSubFoldersByDocType")]
         public bool SubFolders { get; set; }
+        [XmlAttribute(AttributeName = "downloadALL")]
+        public bool DownloadALL { get; set; }
     }
     /**/
     [XmlRoot(ElementName = "timeline")]
