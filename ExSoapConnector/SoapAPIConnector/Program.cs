@@ -318,7 +318,7 @@ namespace SoapAPIConnector
                             string thumbPrint = docSettings.Thumpprint != null ? docSettings.Thumpprint : conf.Thumpprint;
                             string body = Utils.Base64Encode(File.ReadAllBytes(name), "windows-1251");
                             string sign = controller.Sign(thumbPrint, body);
-                            if (docType.StartsWith("DP_"))
+                            if (docType.StartsWith("DP_") || docType.StartsWith("ON_SCHFDOPPR") || docType.StartsWith("ON_KORSCHFDOPPR"))
                             {         
                                 if ((controller.sendDoc(Path.GetFileName(name), body)) 
                                     &&
