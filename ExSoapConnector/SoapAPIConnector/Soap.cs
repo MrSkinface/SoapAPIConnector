@@ -164,7 +164,7 @@ namespace APICon.soap
         
         private static object Action<Type>(string requestBody)
         {            
-            HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(@"http://195.191.226.106:8080/soap");
+            HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(@"https://soap.edi.su/soap/soap");
             if (Program.conf.proxy.Enable)
             {               
                 WebProxy proxy = new WebProxy();                
