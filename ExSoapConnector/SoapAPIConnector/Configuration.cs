@@ -24,6 +24,8 @@ namespace APICon.conf
     {
         [XmlElement(ElementName = "doctype")]
         public string Doctype { get; set; }
+        [XmlElement(ElementName = "custom_sign_extension")]
+        public string custom_sign_extension { get; set; }
         [XmlElement(ElementName = "localPath")]
         public List<string> LocalPath { get; set; }
         [XmlElement(ElementName = "localArchive")]

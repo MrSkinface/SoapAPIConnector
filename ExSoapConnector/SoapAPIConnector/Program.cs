@@ -164,14 +164,14 @@ namespace SoapAPIConnector
             List<Event> evnts = new List<Event>();
             foreach (string name in names)
             {
-                if (name.EndsWith(".xml"))
+                if (name.EndsWith(".xml") || name.EndsWith(".zip"))
                     if (docs.Contains(name.Split('_')[0] + "_" + name.Split('_')[1]))
                     {
                         Event e = new Event();
-                        e.document_id = name.Split('_')[5].Replace(".xml", "");
+                        e.document_id = name.Split('_')[5].Replace(".xml", "").Replace(".zip", "");
                         evnts.Add(e);
                     }
-            }
+            }            
             foreach (Event e in evnts)
                 if (signAndConfirmEvent(e))
                 {
@@ -245,16 +245,21 @@ namespace SoapAPIConnector
                         string sign = controller.Sign(thumbPrint, body);
                         if (controller.confirmEvent(e, body, sign))
                         {
+                            string signExt = ".bin";
+                            if(docSettings.custom_sign_extension!=null)
+                                signExt = docSettings.custom_sign_extension;
+                            if (eventName.Contains(".xml"))
+                                eventName = eventName.Replace(".xml", string.Empty);
                             /*
                                 saving incoming ticket
                              */
                             saveTicket(docSettings.LocalPath, eventName + ".xml", Utils.Base64DecodeToBytes(content.body, "windows-1251"));
-                            saveTicket(docSettings.LocalPath, eventName + ".bin", Utils.StringToBytes(content.sign, "UTF-8"));
+                            saveTicket(docSettings.LocalPath, eventName + signExt, Utils.StringToBytes(content.sign, "UTF-8"));
                             /*
                                 saving outgoing ticket
                              */
                             saveTicket(docSettings.TicketPath, ticket.fileName, ticket.body);
-                            saveTicket(docSettings.TicketPath, ticket.fileName.Replace(".xml", ".bin"), Utils.StringToBytes(sign, "UTF-8"));
+                            saveTicket(docSettings.TicketPath, ticket.fileName.Replace(".xml", signExt), Utils.StringToBytes(sign, "UTF-8"));
                             
                         }
                     }
@@ -490,7 +495,7 @@ namespace SoapAPIConnector
                 Logger.log(ex.Message);
                 return false;
             }
-        }
+        }        
         private void saveTicket(List<string> ticketPath,string fileName, byte[] body)
         {
             foreach (string path in ticketPath)
