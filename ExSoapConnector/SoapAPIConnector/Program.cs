@@ -393,7 +393,7 @@ namespace SoapAPIConnector
         private bool saveDoc(string fileName,byte[]body)
         {
             try
-            {
+            { 
                 string docType = GetDocType(fileName);
                 //Console.WriteLine("fileName: " + fileName+ "; docType: "+ docType);                
                 Document docSettings = conf.GetCustomInboundSettings(docType);
@@ -405,6 +405,13 @@ namespace SoapAPIConnector
                     {
                         if (!Directory.Exists(path))
                             Directory.CreateDirectory(path);
+                        string signOldExt = ".bin";
+                        if (docSettings.custom_sign_extension != null)
+                            if (fileName.EndsWith(signOldExt))
+                            {
+                                string signNewExt = docSettings.custom_sign_extension;
+                                fileName = fileName.Replace(signOldExt, signNewExt);
+                            }
                         File.WriteAllBytes(path + fileName, body);
                         Logger.log(fileName + " saved in " + path);
                     }
