@@ -155,7 +155,17 @@ namespace SoapAPIConnector
         /**/
         public void processTicketsSoap()
         {
-            List<string> names = controller.getList();
+            List<string> names = null;
+            try
+            {
+                names = controller.getList();
+            }
+            catch (Exception ex)
+            {
+                Logger.log("ERROR: tickets will NOT be procceed .");
+                Logger.log(ex.Message);
+                return;
+            }
 
             List<string> docs = new List<string>();
             foreach (Document d in conf.EDOTickets.Document)
@@ -279,9 +289,17 @@ namespace SoapAPIConnector
             foreach (Document d in conf.Inbound.Document)
                 docs.Add(d.Doctype);
 
-            List<string> inbound;
-           
-            inbound = controller.getList();
+            List<string> inbound = null;           
+            try
+            {
+                inbound = controller.getList();
+            }
+            catch (Exception ex)
+            {
+                Logger.log("ERROR: inbound will NOT be procceed .");
+                Logger.log(ex.Message);
+                return;
+            }
             foreach (string name in inbound)
             {                
                 if (conf.Inbound.DownloadALL || (docs.Contains(name.Split('_')[0])) || (docs.Contains(name.Split('_')[0] + "_" + name.Split('_')[1])))
@@ -305,8 +323,17 @@ namespace SoapAPIConnector
         }
         public void processOutbound()
         {
-            List<string> outbound;
-            outbound = Directory.GetFiles(conf.Outbound.DefaultPath).ToList();
+            List<string> outbound=null;            
+            try
+            {
+                outbound = Directory.GetFiles(conf.Outbound.DefaultPath).ToList();
+            }
+            catch (Exception ex)
+            {
+                Logger.log("ERROR: outbound will NOT be procceed .");
+                Logger.log(ex.Message);
+                return;
+            }
             foreach (Document confDoc in conf.Outbound.Document)
                 foreach (string path in confDoc.LocalPath)
                     outbound.AddRange(Directory.GetFiles(path));            
@@ -323,7 +350,11 @@ namespace SoapAPIConnector
                             string thumbPrint = docSettings.Thumpprint != null ? docSettings.Thumpprint : conf.Thumpprint;
                             string body = Utils.Base64Encode(File.ReadAllBytes(name), "windows-1251");
                             string sign = controller.Sign(thumbPrint, body);
-                            if (docType.StartsWith("DP_") || docType.StartsWith("ON_SCHFDOPPOK") || docType.StartsWith("ON_KORSCHFDOPPOK"))
+                            if (
+                                (docType.StartsWith("DP_") || docType.StartsWith("ON_SCHFDOPPOK") || docType.StartsWith("ON_KORSCHFDOPPOK"))
+                                &&
+                                docType.EndsWith(".xml")
+                                )
                             {         
                                 if ((controller.sendDoc(Path.GetFileName(name), body)) 
                                     &&
@@ -523,7 +554,7 @@ namespace SoapAPIConnector
         }
 
         static void Main(string[] args)
-        {            
+        {                
             if (args.Length == 0)
             {
                 new Program();

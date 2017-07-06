@@ -140,18 +140,28 @@ namespace APICon.controller
         }
         public Ticket Ticket(string thumbprint, string fileName)
         {
-            string uuid = fileName.Split('_')[5].Replace(".xml","");
-            ExCert cert = GetExCertificate(thumbprint);
-            ExSigner signer = new ExSigner(cert);
-            CreateTicketResponse response = (CreateTicketResponse)Http.post<CreateTicketResponse>("https://api-service.edi.su/Api/Dixy/Ticket/Generate", new CreateTicketRequest(authToken, uuid, signer));
-            if (response.intCode != 200)
+            CreateTicketResponse response = null;
+            try
             {
-                Logger.log("for file ["+ fileName+"] :" + response.varMessage);
+                string uuid = fileName.Split('_')[5].Replace(".xml", "");
+                ExCert cert = GetExCertificate(thumbprint);
+                ExSigner signer = new ExSigner(cert);
+                response = (CreateTicketResponse)Http.post<CreateTicketResponse>("https://api-service.edi.su/Api/Dixy/Ticket/Generate", new CreateTicketRequest(authToken, uuid, signer));
+                if (response.intCode != 200)
+                {
+                    Logger.log("for file [" + fileName + "] :" + response.varMessage);
+                    return null;
+                }
+                string name = GetIDFileFromTicket(response.content);
+                byte[] body = Utils.Base64DecodeToBytes(response.content, "windows-1251");
+                return new Ticket(name, body);
+            }
+            catch (Exception ex)
+            {
+                Logger.log("for file [" + fileName + "] :" + response.varMessage);
+                Logger.log(ex.Message);
                 return null;
-            }            
-            string name=GetIDFileFromTicket(response.content);            
-            byte[] body= Utils.Base64DecodeToBytes(response.content, "windows-1251");            
-            return new Ticket(name, body);
+            }
         }
         /**/
         public string GetIDFileFromTicket(string ticketContent)
@@ -229,31 +239,24 @@ namespace APICon.controller
         }
         public bool sendTicket(string content, string sign, string docId)
         {
-            EnqueueTicketRequest req = new EnqueueTicketRequest(authToken, docId, content, sign);
-            EnqueueTicketResponse enqueueResponse = (EnqueueTicketResponse)Http.post<EnqueueTicketResponse>("https://api-service.edi.su/Api/Dixy/Ticket/Enqueue", req);
-            if (enqueueResponse.intCode == 200)
-                return true;
-            return false;
-        }
-        /*
-            for events confirm 
-        */
-        /*public Event[] getIncomingEvents()
-        {
-            string timeFrom = DateTime.Now.AddDays(-60).ToString("yyyy-MM-dd HH:mm:ss");
-            string timeTo = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-            string mode = "ESF_UPD";
-            GetTimeLineResponse response = (GetTimeLineResponse)Http.post<GetTimeLineResponse>("https://api-service.edi.su/Api/Dixy/TimeLine/GetTimeLine", new GetTimeLineRequest(authToken, timeFrom, timeTo, mode));
-            List<Event> l = new List<Event>();
-            foreach (Event e in response.timeline)
-                if (e.event_status.Contains("RECIEVED") && e.need_reply_reciept)
-                    l.Add(e);
-            Event[] incomingEvents = new Event[l.Count];
-            int i = 0;
-            foreach (Event e in l)
-                incomingEvents[i++] = e;
-            return incomingEvents;
-        } */       
+            EnqueueTicketRequest req = null;
+            EnqueueTicketResponse enqueueResponse = null;
+            try
+            {
+                req = new EnqueueTicketRequest(authToken, docId, content, sign);
+                enqueueResponse = (EnqueueTicketResponse)Http.post<EnqueueTicketResponse>("https://api-service.edi.su/Api/Dixy/Ticket/Enqueue", req);
+                if (enqueueResponse.intCode == 200)
+                    return true;
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Logger.log("error while processing [" + docId + "]");
+                Logger.log(enqueueResponse.varMessage);
+                Logger.log(ex.Message);
+                return false;
+            }
+        }              
         public Event[] getIncomingEvents()
         {
             string timeFrom = DateTime.Now.AddDays(0- conf.EDOTickets.timeline.fromMinusDays).ToString("yyyy-MM-dd HH:mm:ss");
@@ -300,41 +303,85 @@ namespace APICon.controller
         }
         public ApiDocument getDocInfoByEvent(Event e)
         {
-            GetDocInfoRequest req = new GetDocInfoRequest(authToken, e.document_id);
-            //Console.WriteLine(Utils.ToJson(req));
-            GetDocInfoResponse resp = (GetDocInfoResponse)Http.post<GetDocInfoResponse>("https://api-service.edi.su/Api/Dixy/TimeLine/GetDocData", req);
-            //Console.WriteLine(Utils.ToJson(resp));
-            if (resp.intCode == 200)
+            GetDocInfoRequest req = null;
+            GetDocInfoResponse resp = null;
+            GetContentResponse content = null;
+            try
             {
-                GetContentResponse content = getDocumentContent(e);
-                resp.document.file_body = content.body;
-                resp.document.sign_body = content.sign;
-                return resp.document;
+                req = new GetDocInfoRequest(authToken, e.document_id);                
+                resp = (GetDocInfoResponse)Http.post<GetDocInfoResponse>("https://api-service.edi.su/Api/Dixy/TimeLine/GetDocData", req);                
+                if (resp.intCode == 200)
+                {
+                    content = getDocumentContent(e);
+                    resp.document.file_body = content.body;
+                    resp.document.sign_body = content.sign;
+                    return resp.document;
+                }
+                return null;
             }
-            return null;
+            catch (Exception ex)
+            {
+                Logger.log("error while processing [" + e.document_id + "]");
+                Logger.log(resp.varMessage);
+                Logger.log(ex.Message);
+                return null;
+            }
         }
         
         public bool confirmEvent(Event e, string body, string sign)
         {
-            EnqueueTicketRequest req = new EnqueueTicketRequest(authToken, e.document_id, body, sign);
-            EnqueueTicketResponse enqueueResponse = (EnqueueTicketResponse)Http.post<EnqueueTicketResponse>("https://api-service.edi.su/Api/Dixy/Ticket/Enqueue", req);
-            if (enqueueResponse.intCode == 200)
-                return true;
-            return false;
+            EnqueueTicketResponse enqueueResponse=null;
+            try
+            {
+                EnqueueTicketRequest req = new EnqueueTicketRequest(authToken, e.document_id, body, sign);
+                enqueueResponse = (EnqueueTicketResponse)Http.post<EnqueueTicketResponse>("https://api-service.edi.su/Api/Dixy/Ticket/Enqueue", req);
+                if (enqueueResponse.intCode == 200)
+                    return true;
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Logger.log("error while processing ["+ e.document_id+"]");
+                Logger.log(enqueueResponse.varMessage);
+                Logger.log(ex.Message);
+                return false;
+            }
         }
         public GetContentResponse getDocumentContent(Event e)
         {
-            GetContentResponse response = (GetContentResponse)Http.post<GetContentResponse>("https://api-service.edi.su/Api/Dixy/Content/GetBoth", new GetContentRequest(authToken, e.document_id));
+            GetContentResponse response = null;
+            try
+            {
+                response = (GetContentResponse)Http.post<GetContentResponse>("https://api-service.edi.su/Api/Dixy/Content/GetBoth", new GetContentRequest(authToken, e.document_id));
+            }
+            catch (Exception ex)
+            {
+                Logger.log("error while processing [" + e.document_id + "]");
+                Logger.log(response.varMessage);
+                Logger.log(ex.Message);
+            }
             return response;
         }
         public GetContentResponse getUPDDocumentContent(Event e)
         {
-            GetUPDContentResponse response = (GetUPDContentResponse)Http.post<GetUPDContentResponse>("https://api-service.edi.su/Api/Dixy/Content/GetDocWithSignContent", new GetContentRequest(authToken, e.document_id));
-            GetContentResponse contResp = new GetContentResponse();
-            contResp.intCode = response.intCode;
-            contResp.varMessage = response.varMessage;
-            contResp.body = response.body;
-            contResp.sign = response.sign[0].body;
+            GetUPDContentResponse response=null;
+            GetContentResponse contResp=null;
+            try
+            {
+                response = (GetUPDContentResponse)Http.post<GetUPDContentResponse>("https://api-service.edi.su/Api/Dixy/Content/GetDocWithSignContent", new GetContentRequest(authToken, e.document_id));
+                contResp = new GetContentResponse();
+                contResp.intCode = response.intCode;
+                contResp.varMessage = response.varMessage;
+                contResp.body = response.body;
+                contResp.sign = response.sign[0].body;
+                
+            }
+            catch (Exception ex)
+            {
+                Logger.log("error while processing [" + e.document_id + "]");
+                Logger.log(response.varMessage);
+                Logger.log(ex.Message);
+            }
             return contResp;
         }
 
