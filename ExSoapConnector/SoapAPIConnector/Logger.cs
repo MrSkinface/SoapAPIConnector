@@ -19,6 +19,7 @@ namespace APICon.logger
         public static void log(string message)
         {
             StringBuilder sb = new StringBuilder(logPath);
+            checkIfExist();
             sb.Append(DateTime.Now.ToString("yyyy-MM-dd")).Append("_log.txt");
             string textToLog = "["+DateTime.Now.ToString()+ "]" + message +"\n";
             File.AppendAllText(sb.ToString(), textToLog);
@@ -27,10 +28,16 @@ namespace APICon.logger
         public static void error(string message)
         {
             StringBuilder sb = new StringBuilder(logPath);
+            checkIfExist();
             sb.Append(DateTime.Now.ToString("yyyy-MM-dd")).Append("_error.txt");
             string textToLog = "[" + DateTime.Now.ToString() + "]" + message + "\n";
             File.AppendAllText(sb.ToString(), textToLog);
             Console.Write(textToLog);
+        }
+        public static void checkIfExist()
+        {
+            if (!Directory.Exists(logPath))
+                Directory.CreateDirectory(logPath);
         }
     }
 }

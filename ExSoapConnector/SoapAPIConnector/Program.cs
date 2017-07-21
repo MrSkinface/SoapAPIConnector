@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO;
+using System.IO.Compression;
 using APICon.Util;
 using APICon.conf;
 using APICon.soap;
@@ -13,10 +14,12 @@ using System.Security.Cryptography;
 using APICon.controller;
 using APICon.logger;
 using APICon.rest;
+using ICSharpCode.SharpZipLib.Zip;
+using ICSharpCode.SharpZipLib.Core;
 
 namespace SoapAPIConnector
 {
-    class Program
+    public class Program
     {
         public static Configuration conf;
         private Controller controller;
@@ -32,7 +35,7 @@ namespace SoapAPIConnector
         }
         public Program(String[] args)
         {
-            Program.conf=GetAppConfiguration("configuration.xml");
+            Program.conf= DFSHelper.GetAppConfiguration("configuration.xml");
             controller = new Controller();
             switch (args[0])
             {
@@ -66,6 +69,16 @@ namespace SoapAPIConnector
                     {
                         Console.WriteLine(e.Message);
                     }
+                    break;
+                case "-testrestFULLDEBUG":
+                    AuthorizeRequest debugReq = new AuthorizeRequest(conf.Login, conf.Api_pass);
+                    Console.WriteLine("request body:");
+                    Console.WriteLine(Utils.ToJson(debugReq));
+                    AuthorizeResponse debugResp = (AuthorizeResponse)Http.post<AuthorizeResponse>("https://api-service.edi.su/Api/Dixy/Index/Authorize", debugReq);
+                    Console.WriteLine("response body:");
+                    Console.WriteLine(Utils.ToJson(debugResp));
+                    if (debugResp != null)
+                        Console.WriteLine("rest O.K.");
                     break;
                 case "-testrest":
                     AuthorizeResponse response = (AuthorizeResponse)Http.post<AuthorizeResponse>("https://api-service.edi.su/Api/Dixy/Index/Authorize", new AuthorizeRequest(conf.Login, conf.Api_pass));
@@ -155,15 +168,16 @@ namespace SoapAPIConnector
         /**/
         public void processTicketsSoap()
         {
-            List<string> names = null;
+            Logger.log("start processing tickets...");
+            List <string> names = null;
             try
             {
                 names = controller.getList();
+                Logger.log("INFO: getFilesList returned ["+ names .Count + "] entries");
             }
             catch (Exception ex)
             {
-                Logger.log("ERROR: tickets will NOT be procceed .");
-                Logger.log(ex.Message);
+                Logger.log("ERROR: tickets will NOT be procceed . Reason : " + ex.Message );               
                 return;
             }
 
@@ -263,13 +277,13 @@ namespace SoapAPIConnector
                             /*
                                 saving incoming ticket
                              */
-                            saveTicket(docSettings.LocalPath, eventName + ".xml", Utils.Base64DecodeToBytes(content.body, "windows-1251"));
-                            saveTicket(docSettings.LocalPath, eventName + signExt, Utils.StringToBytes(content.sign, "UTF-8"));
+                            DFSHelper.saveTicket(docSettings.LocalPath, eventName + ".xml", Utils.Base64DecodeToBytes(content.body, "windows-1251"));
+                            DFSHelper.saveTicket(docSettings.LocalPath, eventName + signExt, Utils.StringToBytes(content.sign, "UTF-8"));
                             /*
                                 saving outgoing ticket
                              */
-                            saveTicket(docSettings.TicketPath, ticket.fileName, ticket.body);
-                            saveTicket(docSettings.TicketPath, ticket.fileName.Replace(".xml", signExt), Utils.StringToBytes(sign, "UTF-8"));
+                            DFSHelper.saveTicket(docSettings.TicketPath, ticket.fileName, ticket.body);
+                            DFSHelper.saveTicket(docSettings.TicketPath, ticket.fileName.Replace(".xml", signExt), Utils.StringToBytes(sign, "UTF-8"));
                             
                         }
                     }
@@ -285,6 +299,7 @@ namespace SoapAPIConnector
         }
         public void processInbound()
         {
+            Logger.log("start processing inbound...");
             List<string> docs = new List<string>();
             foreach (Document d in conf.Inbound.Document)
                 docs.Add(d.Doctype);
@@ -293,11 +308,11 @@ namespace SoapAPIConnector
             try
             {
                 inbound = controller.getList();
+                Logger.log("INFO: getFilesList returned [" + inbound.Count + "] entries");
             }
             catch (Exception ex)
             {
-                Logger.log("ERROR: inbound will NOT be procceed .");
-                Logger.log(ex.Message);
+                Logger.log("ERROR: inbound will NOT be procceed . Reason : " + ex.Message );                
                 return;
             }
             foreach (string name in inbound)
@@ -308,7 +323,7 @@ namespace SoapAPIConnector
                     {
                         byte[] docBody = controller.getDoc(name);
                         if (docBody != null)
-                            if (saveDoc(name, docBody))
+                            if (DFSHelper.saveDoc(name, docBody))
                                 if (conf.Inbound.IsArchive)
                                     if (controller.archiveDoc(name))
                                         Logger.log(name + " removed from server .");
@@ -323,6 +338,7 @@ namespace SoapAPIConnector
         }
         public void processOutbound()
         {
+            Logger.log("start processing outbound...");
             List<string> outbound=null;            
             try
             {
@@ -330,8 +346,7 @@ namespace SoapAPIConnector
             }
             catch (Exception ex)
             {
-                Logger.log("ERROR: outbound will NOT be procceed .");
-                Logger.log(ex.Message);
+                Logger.log("ERROR: outbound will NOT be procceed . Reason : " + ex.Message);                
                 return;
             }
             foreach (Document confDoc in conf.Outbound.Document)
@@ -342,18 +357,22 @@ namespace SoapAPIConnector
                 {
                 try
                 {
-                    string docType = GetDocType(Path.GetFileName(name));                    
-                    Document docSettings = conf.GetCustomOutboundSettings(docType);
+                    string docType = DFSHelper.GetDocType(Path.GetFileName(name));                    
+                    Document docSettings = conf.GetCustomOutboundSettings(docType);                    
                     if (docSettings != null)
                         if (docSettings.NeedToBeSigned) // for signed docs
                         {
                             string thumbPrint = docSettings.Thumpprint != null ? docSettings.Thumpprint : conf.Thumpprint;
                             string body = Utils.Base64Encode(File.ReadAllBytes(name), "windows-1251");
                             string sign = controller.Sign(thumbPrint, body);
-                            if (
+                            if (docSettings.NeedToBeZipped) // trick with non-secure soap and xp (w/o support tls over 1.0)
+                            {
+                                zipAndProcessDoc(docSettings, name, body, sign);
+                            }
+                            else if(
                                 (docType.StartsWith("DP_") || docType.StartsWith("ON_SCHFDOPPOK") || docType.StartsWith("ON_KORSCHFDOPPOK"))
                                 &&
-                                docType.EndsWith(".xml")
+                                name.EndsWith(".xml")
                                 )
                             {         
                                 if ((controller.sendDoc(Path.GetFileName(name), body)) 
@@ -363,9 +382,9 @@ namespace SoapAPIConnector
                                     Logger.log(Path.GetFileName(name) + " sent successfully.");
                                     if (conf.Outbound.IsArchive)
                                     {
-                                        if ((moveDocToArc(Path.GetFileName(name), (File.ReadAllBytes(name)), docSettings))
+                                        if ((DFSHelper.moveDocToArc(Path.GetFileName(name), (File.ReadAllBytes(name)), docSettings))
                                             &&
-                                            (moveDocToArc(Path.GetFileName(name).Replace(".xml", ".bin"), Utils.StringToBytes(sign, "UTF-8"), docSettings)))
+                                            (DFSHelper.moveDocToArc(Path.GetFileName(name).Replace(".xml", ".bin"), Utils.StringToBytes(sign, "UTF-8"), docSettings)))
                                             File.Delete(name);
                                     }
                                 }
@@ -377,17 +396,17 @@ namespace SoapAPIConnector
                                     Logger.log(Path.GetFileName(name) + " sent successfully.");
                                     if (conf.Outbound.IsArchive)
                                     {
-                                        if (moveDocToArc(Path.GetFileName(name), File.ReadAllBytes(name), docSettings))
+                                        if (DFSHelper.moveDocToArc(Path.GetFileName(name), File.ReadAllBytes(name), docSettings))
                                             File.Delete(name);
-                                        if (moveDocToArc(Path.GetFileName(name).Replace(".xml", ".bin"), Utils.StringToBytes(sign, "UTF-8"), docSettings))
+                                        if (DFSHelper.moveDocToArc(Path.GetFileName(name).Replace(".xml", ".bin"), Utils.StringToBytes(sign, "UTF-8"), docSettings))
                                             File.Delete(name.Replace(".xml", ".bin"));
                                     }
                                 }
                                 else
                                 {
-                                    if (moveDocToError(Path.GetFileName(name), File.ReadAllBytes(name)))
+                                    if (DFSHelper.moveDocToError(Path.GetFileName(name), File.ReadAllBytes(name)))
                                         File.Delete(name);
-                                    if (moveDocToError(Path.GetFileName(name).Replace(".xml", ".bin"), Utils.StringToBytes(sign, "UTF-8")))
+                                    if (DFSHelper.moveDocToError(Path.GetFileName(name).Replace(".xml", ".bin"), Utils.StringToBytes(sign, "UTF-8")))
                                         File.Delete(name.Replace(".xml", ".bin"));
                                 }
                             }
@@ -401,13 +420,13 @@ namespace SoapAPIConnector
                                 Logger.log(Path.GetFileName(name) + " sent successfully.");
                                 if (conf.Outbound.IsArchive)
                                 {
-                                    if (moveDocToArc(Path.GetFileName(name), (File.ReadAllBytes(name)), docSettings))
+                                    if (DFSHelper.moveDocToArc(Path.GetFileName(name), (File.ReadAllBytes(name)), docSettings))
                                         File.Delete(name);
                                 }
                             }
                             else
                             {
-                                if (moveDocToError(Path.GetFileName(name), (File.ReadAllBytes(name))))
+                                if (DFSHelper.moveDocToError(Path.GetFileName(name), (File.ReadAllBytes(name))))
                                     File.Delete(name);
                             }
                             
@@ -421,138 +440,25 @@ namespace SoapAPIConnector
             }
             
         }
-        private bool saveDoc(string fileName,byte[]body)
+        /*SUPERKOSTYL'*/
+        /*trick with non-secure soap and xp (w/o support tls over 1.0)*/
+        private void zipAndProcessDoc(Document docSettings, string name, string body, string sign)
         {
-            try
-            { 
-                string docType = GetDocType(fileName);
-                //Console.WriteLine("fileName: " + fileName+ "; docType: "+ docType);                
-                Document docSettings = conf.GetCustomInboundSettings(docType);
-                StringBuilder sb = new StringBuilder(conf.Inbound.DefaultPath);
-                //Console.WriteLine("docSettings: " + docSettings);
-                if (docSettings != null)
+            string zipName = Path.GetFileName(name).Replace(".xml", ".zip");
+            byte[] zipBody = ZipHelper.createZipBody(name, body, sign);
+
+            if (controller.sendDoc(zipName, Utils.Base64Encode(zipBody, "UTF-8")))
+            {
+                Logger.log(Path.GetFileName(name) + " sent successfully.");
+                if (conf.Outbound.IsArchive)
                 {
-                    foreach (string path in docSettings.LocalPath)
-                    {
-                        if (!Directory.Exists(path))
-                            Directory.CreateDirectory(path);
-                        string signOldExt = ".bin";
-                        if (docSettings.custom_sign_extension != null)
-                            if (fileName.EndsWith(signOldExt))
-                            {
-                                string signNewExt = docSettings.custom_sign_extension;
-                                fileName = fileName.Replace(signOldExt, signNewExt);
-                            }
-                        File.WriteAllBytes(path + fileName, body);
-                        Logger.log(fileName + " saved in " + path);
-                    }
+                    if (DFSHelper.moveDocToArc(zipName, zipBody, docSettings))
+                        File.Delete(name);
                 }
-                else
-                {
-                    if (conf.Inbound.SubFolders)
-                        sb.Append(docType).Append("\\");
-                    if (!Directory.Exists(sb.ToString()))
-                        Directory.CreateDirectory(sb.ToString());
-                    //Console.WriteLine("sb.ToString(): " + sb.ToString());
-                    File.WriteAllBytes(sb.ToString() + fileName, body);
-                    Logger.log(fileName + " saved in " + sb.ToString());
-                }
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.StackTrace);//debug only
-                Logger.log(ex.Message);
-                return false;
-            }              
-        }
-        private bool moveDocToArc(string fileName, byte[] body, Document doc)
-        {            
-            if (doc.LocalArchive.Count != 0)
-            {
-                foreach (string path in doc.LocalArchive)
-                {
-                    StringBuilder sb = new StringBuilder(path);                    
-                    if (!Directory.Exists(sb.ToString()))
-                        Directory.CreateDirectory(sb.ToString());
-                    try
-                    {
-                        File.WriteAllBytes(sb.Append(fileName).ToString(), body);
-                        Logger.log(fileName + " moved to " + sb.ToString());
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine(ex.StackTrace);//debug only
-                        Logger.log(ex.Message);
-                        return false;
-                    }
-                }
-                return true;
-            }
-            else
-                return moveDocToArc(fileName,body);
-        }
-        private bool moveDocToArc(string fileName, byte[] body)
-        {           
-            try
-            {
-                string docType = GetDocType(fileName);                
-                StringBuilder sb = new StringBuilder(conf.Outbound.DefaultArchive);                
-                if (conf.Outbound.SubFolders)
-                    sb.Append(docType).Append("\\");
-                if (!Directory.Exists(sb.ToString()))
-                    Directory.CreateDirectory(sb.ToString());
-                File.WriteAllBytes(sb.ToString() + fileName, body);
-                Logger.log(fileName + " moved to " + sb.ToString());                
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.StackTrace);//debug only
-                Logger.log(ex.Message);
-                return false;
-            }
-        }
-        private bool moveDocToError(string fileName, byte[] body)
-        {
-            try
-            {
-                string docType = GetDocType(fileName);
-                StringBuilder sb = new StringBuilder(conf.Outbound.DefaultError);
-                if (conf.Outbound.SubFolders)
-                    sb.Append(docType).Append("\\");
-                if (!Directory.Exists(sb.ToString()))
-                    Directory.CreateDirectory(sb.ToString());
-                File.WriteAllBytes(sb.ToString() + fileName, body);
-                Logger.log(fileName + " moved to " + sb.ToString());
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.StackTrace);//debug only
-                Logger.log(ex.Message);
-                return false;
             }
         }        
-        private void saveTicket(List<string> ticketPath,string fileName, byte[] body)
-        {
-            foreach (string path in ticketPath)
-            {
-                if (!Directory.Exists(path))
-                    Directory.CreateDirectory(path);
-                File.WriteAllBytes(path + fileName, body);
-                Logger.log(fileName + " saved in " + path);
-            }
-        }
-        private string GetDocType(string fileName)
-        {
-            List<string> checkEDOList = new List<string>(new string[] {"ON","DP"});
-            var v = fileName.Split('_');
-            if(checkEDOList.Contains(v[0]))
-                return v[0]+"_"+v[1];
-            return v[0];
-        }
-
+        /**/
+        
         static void Main(string[] args)
         {                
             if (args.Length == 0)
@@ -565,18 +471,13 @@ namespace SoapAPIConnector
             }
             else
             {
-                Configuration conf = GetAppConfiguration(args[0]);
+                Configuration conf = DFSHelper.GetAppConfiguration(args[0]);
                 Logger.loadConfig(conf);
                 Logger.log("start");                
                 new Program(conf);
                 Logger.log("end");
             }            
         }
-        public static Configuration GetAppConfiguration(string appArg)
-        {
-            string path = Path.GetFullPath(appArg);            
-            byte[] xml = File.ReadAllBytes(path);
-            return Utils.FromXml<Configuration>(Encoding.GetEncoding("UTF-8").GetString(xml));
-        }
+        
     }
 }

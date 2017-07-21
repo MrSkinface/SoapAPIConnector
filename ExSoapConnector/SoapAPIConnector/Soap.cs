@@ -108,7 +108,7 @@ namespace APICon.soap
             Append(req.user.login).Append(@"</login><pass>").
             Append(req.user.pass).Append(@"</pass>
             </user>
-</soap:getList>");           
+</soap:getList>");            
             return Action<Type>(createRequestBody(sb.ToString()));
         }
         public static object GetDoc<Type>(GetDocRequest req)
@@ -163,15 +163,22 @@ namespace APICon.soap
         }
         
         private static object Action<Type>(string requestBody)
-        {            
-            HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(@"https://soap.edi.su/soap/soap");
-            if (Program.conf.proxy.Enable)
-            {               
-                WebProxy proxy = new WebProxy();                
-                Uri proxyUri = new Uri(Program.conf.proxy.address);
-                proxy.Credentials = new NetworkCredential(Program.conf.proxy.login, Program.conf.proxy.password);
-                webRequest.Proxy = proxy;
-            }
+        {
+            string soapUri = "https://ru-soap.edi.su/soap";
+            string badUri = "http://195.191.226.106:8080/soap";
+            HttpWebRequest webRequest =
+                Program.conf.use_non_secure_soap_connection?
+                (HttpWebRequest)WebRequest.Create(badUri)
+                :
+                (HttpWebRequest)WebRequest.Create(soapUri);
+            if (Program.conf.proxy != null)
+                if (Program.conf.proxy.Enable)
+                {               
+                    WebProxy proxy = new WebProxy();                
+                    Uri proxyUri = new Uri(Program.conf.proxy.address);
+                    proxy.Credentials = new NetworkCredential(Program.conf.proxy.login, Program.conf.proxy.password);
+                    webRequest.Proxy = proxy;
+                }
             webRequest.Headers.Add(@"SOAP:Action");
             webRequest.ContentType = "text/xml; charset=UTF-8";
             webRequest.Accept = "text/xml";
@@ -181,10 +188,10 @@ namespace APICon.soap
             using (Stream stream = webRequest.GetRequestStream())
             {
                 bodyRequest.Save(stream);
-                WebResponse response = null;                 
+                WebResponse response = null;
                 try
                 {
-                    response = webRequest.GetResponse();                    
+                    response = webRequest.GetResponse();
                     XmlReader reader;
                     using (reader = XmlReader.Create(response.GetResponseStream()))
                     {
@@ -192,11 +199,15 @@ namespace APICon.soap
                         reader = reader.ReadSubtree();
                         StringBuilder sb = new StringBuilder();
                         while (reader.Read())
-                            sb.Append(reader.ReadOuterXml());
-                        //Console.WriteLine(sb.ToString());
+                            sb.Append(reader.ReadOuterXml());                        
                         return Utils.FromXml<Type>(sb.ToString(), "UTF-8");
                     }
-                }                
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.StackTrace);
+                    return null;
+                }
                 finally
                 {
                     stream.Close();

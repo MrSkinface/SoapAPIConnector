@@ -36,6 +36,8 @@ namespace APICon.conf
         public string Thumpprint { get; set; }
         [XmlAttribute(AttributeName = "needToBeSigned")]
         public bool NeedToBeSigned { get; set; }
+        [XmlAttribute(AttributeName = "needToBeZipped")]
+        public bool NeedToBeZipped { get; set; }
         [XmlAttribute(AttributeName = "ticketsGenerate")]
         public bool TicketsGenerate { get; set; }
     }
@@ -80,6 +82,8 @@ namespace APICon.conf
     [XmlRoot(ElementName = "configuration")]
     public class Configuration
     {
+        [XmlElement(ElementName = "use_non_secure_soap_connection")]
+        public bool use_non_secure_soap_connection { get; set; }
         [XmlElement(ElementName = "login")]
         public string Login { get; set; }
         [XmlElement(ElementName = "soap_pass")]

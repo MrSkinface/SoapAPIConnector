@@ -79,7 +79,7 @@ namespace APICon.controller
             req.user.pass = Utils.GetMD5String(conf.Soap_pass);
             GetListResponse resp = (GetListResponse)Soap.GetList<GetListResponse>(req);
             if (resp.errorCode != 0)
-                throw new Exception(resp.errorMessage);
+                throw new Exception(resp.errorMessage);            
             return resp.list;
         }
         public bool sendDoc(string fileName, string base64data)
@@ -175,8 +175,17 @@ namespace APICon.controller
         {
             string login = conf.Login;
             string password = conf.Api_pass;
-            AuthorizeResponse response = (AuthorizeResponse)Http.post<AuthorizeResponse>("https://api-service.edi.su/Api/Dixy/Index/Authorize", new AuthorizeRequest(login, password));
-            return response.varToken;
+            AuthorizeResponse response;
+            try
+            {
+                response = (AuthorizeResponse)Http.post<AuthorizeResponse>("https://api-service.edi.su/Api/Dixy/Index/Authorize", new AuthorizeRequest(login, password));
+                return response.varToken;
+            }
+            catch (Exception ex)
+            {
+                Logger.log("ERROR: api auth fails. Api funcs will NOT be able . Reason : " + ex.Message);
+                return null;
+            }            
         }
         /**/
         public ExCert GetExCertificate(string thumbprint)
