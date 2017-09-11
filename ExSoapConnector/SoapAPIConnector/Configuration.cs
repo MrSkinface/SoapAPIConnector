@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.IO;
 using System.Xml.Serialization;
 
 namespace APICon.conf
@@ -28,6 +29,8 @@ namespace APICon.conf
         public string custom_sign_extension { get; set; }
         [XmlElement(ElementName = "localPath")]
         public List<string> LocalPath { get; set; }
+        [XmlElement(ElementName = "remoteFileNamePrefix")]
+        public string remoteFileNamePrefix { get; set; }
         [XmlElement(ElementName = "localArchive")]
         public List<string> LocalArchive { get; set; }
         [XmlElement(ElementName = "ticketPath")]
@@ -114,6 +117,27 @@ namespace APICon.conf
         {
             foreach (Document doc in this.Outbound.Document)
                 if (doc.Doctype == docType)
+                    return doc;
+            return null;
+        }
+        public Document GetCustomOutboundSettingsByPath(string docType, string path)
+        {
+            /*Console.WriteLine(docType);
+            Console.WriteLine(path);
+            Console.WriteLine(Path.GetDirectoryName(path) + "\\");
+
+            string dirName = Path.GetDirectoryName(path);
+            foreach (Document doc in this.Outbound.Document)
+            {
+                Console.WriteLine((doc.LocalPath.Contains(dirName)) ||(doc.LocalPath.Contains(dirName + "\\")));
+                foreach (string p in doc.LocalPath)
+                {
+                    Console.WriteLine(p);
+                }
+            }*/
+            string dirName = Path.GetDirectoryName(path);
+            foreach (Document doc in this.Outbound.Document)
+                if ((doc.Doctype == docType) || (doc.LocalPath.Contains(dirName)) || (doc.LocalPath.Contains(dirName + "\\")))
                     return doc;
             return null;
         }

@@ -36,6 +36,7 @@ namespace SoapAPIConnector
         public Program(String[] args)
         {
             Program.conf= DFSHelper.GetAppConfiguration("configuration.xml");
+            Logger.loadConfig();
             controller = new Controller();
             switch (args[0])
             {
@@ -74,14 +75,14 @@ namespace SoapAPIConnector
                     AuthorizeRequest debugReq = new AuthorizeRequest(conf.Login, conf.Api_pass);
                     Console.WriteLine("request body:");
                     Console.WriteLine(Utils.ToJson(debugReq));
-                    AuthorizeResponse debugResp = (AuthorizeResponse)Http.post<AuthorizeResponse>("https://api-service.edi.su/Api/Dixy/Index/Authorize", debugReq);
+                    AuthorizeResponse debugResp = (AuthorizeResponse)Http2.post<AuthorizeResponse>("https://api-service.edi.su/Api/Dixy/Index/Authorize", debugReq);
                     Console.WriteLine("response body:");
                     Console.WriteLine(Utils.ToJson(debugResp));
                     if (debugResp != null)
                         Console.WriteLine("rest O.K.");
                     break;
                 case "-testrest":
-                    AuthorizeResponse response = (AuthorizeResponse)Http.post<AuthorizeResponse>("https://api-service.edi.su/Api/Dixy/Index/Authorize", new AuthorizeRequest(conf.Login, conf.Api_pass));
+                    AuthorizeResponse response = (AuthorizeResponse)Http2.post<AuthorizeResponse>("https://api-service.edi.su/Api/Dixy/Index/Authorize", new AuthorizeRequest(conf.Login, conf.Api_pass));
                     if(response!=null)
                         Console.WriteLine("rest O.K.");
                     break;
@@ -253,9 +254,9 @@ namespace SoapAPIConnector
             try
             {
                 //Console.WriteLine(e.document_id);
-                GetContentResponse content = controller.getDocumentContent(e);
+                GetContentResponse content = controller.getUPDDocumentContent(e);
                 if (content.intCode != 200)
-                    content = controller.getUPDDocumentContent(e);
+                    content = controller.getDocumentContent(e);
                 string eventName = controller.GetIDFileFromTicket(content.body);
                 string docType = eventName.Split('_')[0] + "_" + eventName.Split('_')[1];
                 Document docSettings = conf.GetCustomEDOTicketSettings(docType);
@@ -351,14 +352,14 @@ namespace SoapAPIConnector
             }
             foreach (Document confDoc in conf.Outbound.Document)
                 foreach (string path in confDoc.LocalPath)
-                    outbound.AddRange(Directory.GetFiles(path));            
-                
-                foreach (string name in outbound)
-                {
+                    outbound.AddRange(Directory.GetFiles(path));
+
+            foreach (string name in outbound)
+            {                
                 try
                 {
                     string docType = DFSHelper.GetDocType(Path.GetFileName(name));                    
-                    Document docSettings = conf.GetCustomOutboundSettings(docType);                    
+                    Document docSettings = conf.GetCustomOutboundSettingsByPath(docType, name);                    
                     if (docSettings != null)
                         if (docSettings.NeedToBeSigned) // for signed docs
                         {
@@ -414,10 +415,13 @@ namespace SoapAPIConnector
                         }
                         else // for simple docs
                         {
-                            string body = Utils.Base64Encode(File.ReadAllBytes(name), "UTF-8");
-                            if (controller.sendDoc(Path.GetFileName(name), body))
+                            string body = Utils.Base64Encode(File.ReadAllBytes(name), "UTF-8");                            
+                            string remoteName = Path.GetFileName(name);
+                            if (docSettings.remoteFileNamePrefix != null)
+                                remoteName = docSettings.remoteFileNamePrefix + remoteName;                            
+                            if (controller.sendDoc(remoteName, body))
                             {
-                                Logger.log(Path.GetFileName(name) + " sent successfully.");
+                                Logger.log(remoteName + " sent successfully.");
                                 if (conf.Outbound.IsArchive)
                                 {
                                     if (DFSHelper.moveDocToArc(Path.GetFileName(name), (File.ReadAllBytes(name)), docSettings))

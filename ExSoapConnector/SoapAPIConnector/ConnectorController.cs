@@ -105,7 +105,7 @@ namespace APICon.controller
                 req = new DocumentUPDSendRequest(authToken, content, sign, docType);
             else
                 req = new DocumentSendRequest(authToken, content, sign, docType);            
-            DocumentSendResponse response = (DocumentSendResponse)Http.post<DocumentSendResponse>("https://api-service.edi.su/Api/Dixy/Document/Send", req);
+            DocumentSendResponse response = (DocumentSendResponse)Http2.post<DocumentSendResponse>("https://api-service.edi.su/Api/Dixy/Document/Send", req);
             if (response.intCode == 200)
                 return true;
             Logger.error("ERROR: "+ response.varMessage+" [ "+GetIDFileFromTicket(content)+" ]");
@@ -146,7 +146,7 @@ namespace APICon.controller
                 string uuid = fileName.Split('_')[5].Replace(".xml", "");
                 ExCert cert = GetExCertificate(thumbprint);
                 ExSigner signer = new ExSigner(cert);
-                response = (CreateTicketResponse)Http.post<CreateTicketResponse>("https://api-service.edi.su/Api/Dixy/Ticket/Generate", new CreateTicketRequest(authToken, uuid, signer));
+                response = (CreateTicketResponse)Http2.post<CreateTicketResponse>("https://api-service.edi.su/Api/Dixy/Ticket/Generate", new CreateTicketRequest(authToken, uuid, signer));
                 if (response.intCode != 200)
                 {
                     Logger.log("for file [" + fileName + "] :" + response.varMessage);
@@ -178,7 +178,7 @@ namespace APICon.controller
             AuthorizeResponse response;
             try
             {
-                response = (AuthorizeResponse)Http.post<AuthorizeResponse>("https://api-service.edi.su/Api/Dixy/Index/Authorize", new AuthorizeRequest(login, password));
+                response = (AuthorizeResponse)Http2.post<AuthorizeResponse>("https://api-service.edi.su/Api/Dixy/Index/Authorize", new AuthorizeRequest(login, password));
                 return response.varToken;
             }
             catch (Exception ex)
@@ -253,7 +253,7 @@ namespace APICon.controller
             try
             {
                 req = new EnqueueTicketRequest(authToken, docId, content, sign);
-                enqueueResponse = (EnqueueTicketResponse)Http.post<EnqueueTicketResponse>("https://api-service.edi.su/Api/Dixy/Ticket/Enqueue", req);
+                enqueueResponse = (EnqueueTicketResponse)Http2.post<EnqueueTicketResponse>("https://api-service.edi.su/Api/Dixy/Ticket/Enqueue", req);
                 if (enqueueResponse.intCode == 200)
                     return true;
                 return false;
@@ -271,7 +271,7 @@ namespace APICon.controller
             string timeFrom = DateTime.Now.AddDays(0- conf.EDOTickets.timeline.fromMinusDays).ToString("yyyy-MM-dd HH:mm:ss");
             string timeTo = DateTime.Now.AddDays(conf.EDOTickets.timeline.toPlusDays).ToString("yyyy-MM-dd HH:mm:ss");
             string mode = "ESF_UPD";
-            GetTimeLineResponse response = (GetTimeLineResponse)Http.post<GetTimeLineResponse>("https://api-service.edi.su/Api/Dixy/TimeLine/GetTimeLine", new GetTimeLineRequest(authToken, timeFrom, timeTo, mode));
+            GetTimeLineResponse response = (GetTimeLineResponse)Http2.post<GetTimeLineResponse>("https://api-service.edi.su/Api/Dixy/TimeLine/GetTimeLine", new GetTimeLineRequest(authToken, timeFrom, timeTo, mode));
             List<Event> l = new List<Event>();
             /**/
             List<string> docs=new List<string>();
@@ -296,13 +296,13 @@ namespace APICon.controller
         }
         public GetUnreadTimeLineResponse getUnreadEvents()
         {
-            GetUnreadTimeLineResponse response = (GetUnreadTimeLineResponse)Http.post<GetUnreadTimeLineResponse>("https://api-service.edi.su/Api/Dixy/TimeLine/GetUnreadTimeLine", new GetTimeLineRequest(authToken));
+            GetUnreadTimeLineResponse response = (GetUnreadTimeLineResponse)Http2.post<GetUnreadTimeLineResponse>("https://api-service.edi.su/Api/Dixy/TimeLine/GetUnreadTimeLine", new GetTimeLineRequest(authToken));
             return response;
         }
         public bool MarkEventRead(string event_id)
         {
             MarkEventReadRequest request=new MarkEventReadRequest(authToken, event_id);
-            MarkEventReadResponse response = (MarkEventReadResponse)Http.post<MarkEventReadResponse>("https://api-service.edi.su/Api/Dixy/TimeLine/MarkEventRead", request);
+            MarkEventReadResponse response = (MarkEventReadResponse)Http2.post<MarkEventReadResponse>("https://api-service.edi.su/Api/Dixy/TimeLine/MarkEventRead", request);
             if (response.intCode == 200)
             {
                 Logger.log("event id [" + event_id + "] marked as [READ] .");
@@ -318,7 +318,7 @@ namespace APICon.controller
             try
             {
                 req = new GetDocInfoRequest(authToken, e.document_id);                
-                resp = (GetDocInfoResponse)Http.post<GetDocInfoResponse>("https://api-service.edi.su/Api/Dixy/TimeLine/GetDocData", req);                
+                resp = (GetDocInfoResponse)Http2.post<GetDocInfoResponse>("https://api-service.edi.su/Api/Dixy/TimeLine/GetDocData", req);                
                 if (resp.intCode == 200)
                 {
                     content = getDocumentContent(e);
@@ -343,7 +343,7 @@ namespace APICon.controller
             try
             {
                 EnqueueTicketRequest req = new EnqueueTicketRequest(authToken, e.document_id, body, sign);
-                enqueueResponse = (EnqueueTicketResponse)Http.post<EnqueueTicketResponse>("https://api-service.edi.su/Api/Dixy/Ticket/Enqueue", req);
+                enqueueResponse = (EnqueueTicketResponse)Http2.post<EnqueueTicketResponse>("https://api-service.edi.su/Api/Dixy/Ticket/Enqueue", req);
                 if (enqueueResponse.intCode == 200)
                     return true;
                 return false;
@@ -361,7 +361,7 @@ namespace APICon.controller
             GetContentResponse response = null;
             try
             {
-                response = (GetContentResponse)Http.post<GetContentResponse>("https://api-service.edi.su/Api/Dixy/Content/GetBoth", new GetContentRequest(authToken, e.document_id));
+                response = (GetContentResponse)Http2.post<GetContentResponse>("https://api-service.edi.su/Api/Dixy/Content/GetBoth", new GetContentRequest(authToken, e.document_id));
             }
             catch (Exception ex)
             {
@@ -377,7 +377,7 @@ namespace APICon.controller
             GetContentResponse contResp=null;
             try
             {
-                response = (GetUPDContentResponse)Http.post<GetUPDContentResponse>("https://api-service.edi.su/Api/Dixy/Content/GetDocWithSignContent", new GetContentRequest(authToken, e.document_id));
+                response = (GetUPDContentResponse)Http2.post<GetUPDContentResponse>("https://api-service.edi.su/Api/Dixy/Content/GetDocWithSignContent", new GetContentRequest(authToken, e.document_id));
                 contResp = new GetContentResponse();
                 contResp.intCode = response.intCode;
                 contResp.varMessage = response.varMessage;

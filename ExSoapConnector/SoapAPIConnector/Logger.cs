@@ -5,6 +5,7 @@ using System.Text;
 using System.IO;
 using System.Threading.Tasks;
 using APICon.conf;
+using SoapAPIConnector;
 
 namespace APICon.logger
 {
@@ -12,6 +13,10 @@ namespace APICon.logger
     {
         public static string logPath { get; set; }
 
+        public static void loadConfig()
+        {
+            logPath = Program.conf.LogFile;
+        }
         public static void loadConfig(Configuration conf)
         {
             logPath = conf.LogFile;

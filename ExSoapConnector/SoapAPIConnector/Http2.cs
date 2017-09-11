@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using APICon.Util;
+using APICon.logger;
 
 namespace APICon.rest
 {
@@ -13,21 +14,24 @@ namespace APICon.rest
         {
             var client = new RestClient(url);            
             var request = new RestRequest(Method.POST);
-            request.AddJsonBody(data);            
+            request.AddJsonBody(data);               
             IRestResponse response = client.Execute(request);
             var content = response.Content;
-            Console.WriteLine(response.StatusDescription);
-            Console.WriteLine(response.StatusCode);
-            Console.WriteLine(response.Server);
-            Console.WriteLine(response.ResponseUri);
-            Console.WriteLine(response.ResponseStatus);
-            Console.WriteLine(response.RawBytes);
-            Console.WriteLine(response.ErrorMessage);
-            Console.WriteLine(response.ContentType);
-            Console.WriteLine(response.ContentLength);
-            Console.WriteLine(response.ContentEncoding);
-            Console.WriteLine(response.Content);
-            return Utils.FromJson<Type>(content);            
+            if (response.StatusCode != System.Net.HttpStatusCode.OK)
+            {
+                Logger.log(
+                    "ERROR: Server responded with: \nStatusCode [" + response.StatusCode + "]" +
+                    "\nStatusDescription [" + response.StatusDescription + "]." +
+                    "\nResponseUri [" + response.ResponseUri + "]." +
+                    "\nContentLength [" + response.ContentLength + "]." +
+                    "\nDebug: \nrequest body:\n" +
+                    Utils.ToJson(data) +
+                    "\nresponse body:\n" +
+                    content
+                    );
+                //return null;
+            }            
+            return Utils.FromJson<Type>(content);                    
         }
     }
 }
