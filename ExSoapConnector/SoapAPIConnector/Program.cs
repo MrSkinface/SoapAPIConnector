@@ -2,20 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.IO;
-using System.IO.Compression;
 using APICon.Util;
 using APICon.conf;
 using APICon.soap;
-using System.Xml;
-using System.Xml.Serialization;
-using System.Security.Cryptography;
 using APICon.controller;
 using APICon.logger;
 using APICon.rest;
-using ICSharpCode.SharpZipLib.Zip;
-using ICSharpCode.SharpZipLib.Core;
+using APICon.Condra;
 
 namespace SoapAPIConnector
 {
@@ -349,11 +343,12 @@ namespace SoapAPIConnector
             {
                 Logger.log("ERROR: outbound will NOT be procceed . Reason : " + ex.Message);                
                 return;
-            }
-            foreach (Document confDoc in conf.Outbound.Document)
-                foreach (string path in confDoc.LocalPath)
-                    outbound.AddRange(Directory.GetFiles(path));
-
+            }     
+            /*
+             adding all others files from custom folders
+             */
+            outbound.AddRange(DFSHelper.GetOutFiles(conf.Outbound.Document));
+            
             foreach (string name in outbound)
             {                
                 try
@@ -370,15 +365,15 @@ namespace SoapAPIConnector
                             {
                                 zipAndProcessDoc(docSettings, name, body, sign);
                             }
-                            else if(
+                            else if (
                                 (docType.StartsWith("DP_") || docType.StartsWith("ON_SCHFDOPPOK") || docType.StartsWith("ON_KORSCHFDOPPOK"))
                                 &&
                                 name.EndsWith(".xml")
                                 )
-                            {         
-                                if ((controller.sendDoc(Path.GetFileName(name), body)) 
+                            {
+                                if ((controller.sendDoc(Path.GetFileName(name), body))
                                     &&
-                                    (controller.sendDoc(Path.GetFileName(name).Replace(".xml",".bin"), sign)))
+                                    (controller.sendDoc(Path.GetFileName(name).Replace(".xml", ".bin"), sign)))
                                 {
                                     Logger.log(Path.GetFileName(name) + " sent successfully.");
                                     if (conf.Outbound.IsArchive)
@@ -387,6 +382,32 @@ namespace SoapAPIConnector
                                             &&
                                             (DFSHelper.moveDocToArc(Path.GetFileName(name).Replace(".xml", ".bin"), Utils.StringToBytes(sign, "UTF-8"), docSettings)))
                                             File.Delete(name);
+                                    }
+                                }
+                            }
+                            else if (docType.Equals("CONDRA", StringComparison.OrdinalIgnoreCase))
+                            {                                
+                                var c = Condra.toObj(name);                                
+
+                                string condraXmlBody = body;
+                                string filePath = Path.GetDirectoryName(name) + Path.DirectorySeparatorChar + c.getFileName();
+
+                                body = Utils.Base64Encode(File.ReadAllBytes(filePath), "UTF-8");                              
+                                sign = controller.Sign(thumbPrint, body);
+
+                                string condraName = "condra_" + Guid.NewGuid() + ".zip";
+                                byte[] condra = ZipHelper.createCondraZip(condraXmlBody, c.getFileName(), body, c.getSignName(), sign);
+
+                                if (controller.sendDoc(condraName, Utils.Base64Encode(condra, "UTF-8")))
+                                {
+                                    Logger.log(Path.GetFileName(condraName) + " sent successfully.");
+                                    if (conf.Outbound.IsArchive)
+                                    {
+                                        if (DFSHelper.moveDocToArc(condraName, condra, docSettings))
+                                        {
+                                            File.Delete(name);
+                                            File.Delete(filePath);
+                                        }
                                     }
                                 }
                             }
@@ -407,8 +428,8 @@ namespace SoapAPIConnector
                                 catch (Exception e)
                                 {
                                     Logger.error("ERROR: " + e.Message + " [ " + controller.GetIDFileFromTicket(body) + " ]");
-                                    handleSendException(e, name, sign);                                  
-                                }                                
+                                    handleSendException(e, name, sign);
+                                }
                             }
                         }
                         else // for simple docs

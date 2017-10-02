@@ -25,11 +25,28 @@ namespace APICon.Util
                 return v[0] + "_" + v[1];
             return v[0];
         }
+        public static string[] GetOutFiles(List<Document>doc)
+        {
+            List<String> res = new List<string>();
+            foreach (Document confDoc in doc)
+                foreach (string path in confDoc.LocalPath)
+                {
+                    if (confDoc.Doctype.Equals("CONDRA", StringComparison.OrdinalIgnoreCase))
+                    {
+                        res.AddRange(Directory.GetFiles(path,"condra_*.xml"));
+                    }
+                    else
+                    {
+                        res.AddRange(Directory.GetFiles(path));
+                    }
+                }
+            return res.ToArray();
+        }
         public static bool saveDoc(string fileName, byte[] body)
         {
             try
             {
-                string docType = DFSHelper.GetDocType(fileName);
+                string docType = GetDocType(fileName);
                 //Console.WriteLine("fileName: " + fileName+ "; docType: "+ docType);                
                 Document docSettings = Program.conf.GetCustomInboundSettings(docType);
                 StringBuilder sb = new StringBuilder(Program.conf.Inbound.DefaultPath);
@@ -47,8 +64,15 @@ namespace APICon.Util
                                 string signNewExt = docSettings.custom_sign_extension;
                                 fileName = fileName.Replace(signOldExt, signNewExt);
                             }
-                        File.WriteAllBytes(path + fileName, body);
-                        Logger.log(fileName + " saved in " + path);
+                        if (docType.Equals("condra", StringComparison.OrdinalIgnoreCase))
+                        {
+                            return saveCondra(docSettings, fileName, body, true);
+                        }
+                        else
+                        {
+                            File.WriteAllBytes(path + fileName, body);
+                            Logger.log(fileName + " saved in " + path);
+                        }
                     }
                 }
                 else
@@ -69,6 +93,20 @@ namespace APICon.Util
                 Logger.log(ex.Message);
                 return false;
             }
+        }
+        private static bool saveCondra(Document docSettings, string fileName, byte[] zip, bool unzip)
+        {
+            Dictionary<string, byte[]> map = ZipHelper.unzip(zip);
+            foreach (string path in docSettings.LocalPath)
+            {
+                foreach (string entry in map.Keys)
+                {
+                    string name = entry.Equals("condra.xml", StringComparison.OrdinalIgnoreCase) ? fileName.Replace(".zip",".xml") : entry;
+                    File.WriteAllBytes(path + name, map[entry]);
+                    Logger.log(name + " saved in " + path);
+                }
+            }
+            return true;
         }
         public static void saveTicket(List<string> ticketPath, string fileName, byte[] body)
         {
