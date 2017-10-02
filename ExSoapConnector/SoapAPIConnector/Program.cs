@@ -392,8 +392,9 @@ namespace SoapAPIConnector
                             }
                             else
                             {
-                                if (controller.sendDocApi(body, sign, docType))
+                                try
                                 {
+                                    controller.sendDocApi(body, sign, docType);
                                     Logger.log(Path.GetFileName(name) + " sent successfully.");
                                     if (conf.Outbound.IsArchive)
                                     {
@@ -403,15 +404,12 @@ namespace SoapAPIConnector
                                             File.Delete(name.Replace(".xml", ".bin"));
                                     }
                                 }
-                                else
+                                catch (Exception e)
                                 {
-                                    if (DFSHelper.moveDocToError(Path.GetFileName(name), File.ReadAllBytes(name)))
-                                        File.Delete(name);
-                                    if (DFSHelper.moveDocToError(Path.GetFileName(name).Replace(".xml", ".bin"), Utils.StringToBytes(sign, "UTF-8")))
-                                        File.Delete(name.Replace(".xml", ".bin"));
-                                }
+                                    Logger.error("ERROR: " + e.Message + " [ " + controller.GetIDFileFromTicket(body) + " ]");
+                                    handleSendException(e, name, sign);                                  
+                                }                                
                             }
-
                         }
                         else // for simple docs
                         {
@@ -443,6 +441,20 @@ namespace SoapAPIConnector
                 }
             }
             
+        }
+        private void handleSendException(Exception e , string filePath, string signBody)
+        {
+            if (e.Message.Equals("Not find successful Aperak for document invoice"))
+            {
+                Logger.log("file ["+ filePath +"] will be waiting for next sending");
+            }
+            else
+            {
+                if (DFSHelper.moveDocToError(Path.GetFileName(filePath), File.ReadAllBytes(filePath)))
+                    File.Delete(filePath);
+                if (DFSHelper.moveDocToError(Path.GetFileName(filePath).Replace(".xml", ".bin"), Utils.StringToBytes(signBody, "UTF-8")))
+                    File.Delete(filePath.Replace(".xml", ".bin"));
+            }            
         }
         /*SUPERKOSTYL'*/
         /*trick with non-secure soap and xp (w/o support tls over 1.0)*/

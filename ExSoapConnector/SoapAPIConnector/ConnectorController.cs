@@ -108,8 +108,7 @@ namespace APICon.controller
             DocumentSendResponse response = (DocumentSendResponse)Http2.post<DocumentSendResponse>("https://api-service.edi.su/Api/Dixy/Document/Send", req);
             if (response.intCode == 200)
                 return true;
-            Logger.error("ERROR: "+ response.varMessage+" [ "+GetIDFileFromTicket(content)+" ]");
-            return false;
+            throw new Exception(response.varMessage);
         }        
         public string Sign(string thumbprint, string base64data)
         {
