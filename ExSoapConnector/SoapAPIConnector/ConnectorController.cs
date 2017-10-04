@@ -41,7 +41,9 @@ namespace APICon.controller
 
             ticketTypes.Add("DP_PDPOL", "ПодтверждениеДатыПоступления".Substring(0, 22));
             ticketTypes.Add("DP_PDOTPR", "ПодтверждениеДатыОтправки".Substring(0, 22));
-            ticketTypes.Add("DP_UVUTOCH", "УведомлениеОбУточнении".Substring(0, 22));            
+            ticketTypes.Add("DP_UVUTOCH", "УведомлениеОбУточнении".Substring(0, 22));
+            ticketTypes.Add("DP_IZVPOL", "ИзвещениеПолученияУПДПокупатель".Substring(0, 22));
+            ticketTypes.Add("ON_SCHFDOPPOK", "ИнформацияПокупателяRECIEVED".Substring(0, 22));
         }
 
         public bool archiveDoc(string name)
@@ -165,10 +167,18 @@ namespace APICon.controller
         /**/
         public string GetIDFileFromTicket(string ticketContent)
         {
-            string xmlString = Utils.Base64Decode(ticketContent, "windows-1251");
-            XmlDocument xml = new XmlDocument();
-            xml.LoadXml(xmlString);
-            return xml.SelectSingleNode("/Файл[@*]/@ИдФайл").InnerText+".xml";
+            try
+            {
+                string xmlString = Utils.Base64Decode(ticketContent, "windows-1251");
+                XmlDocument xml = new XmlDocument();
+                xml.LoadXml(xmlString);
+                return xml.SelectSingleNode("/Файл[@*]/@ИдФайл").InnerText + ".xml";
+            }
+            catch (Exception e)
+            {
+                Logger.error(e.StackTrace);
+                throw e;                
+            }
         }
         private string authorize()
         {
@@ -282,7 +292,7 @@ namespace APICon.controller
             }            
             /**/
             foreach (Event e in response.timeline)
-                if (e.event_status.Contains("RECIEVED") && e.need_reply_reciept && e.event_status.Length>=22)
+                if (e.event_status.Contains("RECIEVED") /*&& e.need_reply_reciept*/ && e.event_status.Length>=22)
                 {
                     if (docs.Contains(e.event_status.Substring(0, 22)))
                         l.Add(e);

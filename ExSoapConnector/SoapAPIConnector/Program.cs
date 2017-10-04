@@ -256,30 +256,42 @@ namespace SoapAPIConnector
                 Document docSettings = conf.GetCustomEDOTicketSettings(docType);
                 if (docSettings != null)
                 {
-                    string thumbPrint = docSettings.Thumpprint != null ? docSettings.Thumpprint : conf.Thumpprint;
-                    Ticket ticket = controller.Ticket(thumbPrint, eventName);
-                    if (ticket != null)
+                    string signExt = ".bin";
+                    if (docSettings.custom_sign_extension != null)
+                        signExt = docSettings.custom_sign_extension;
+
+                    if (!docSettings.TicketsGenerate)
                     {
-                        string body = Utils.Base64Encode(ticket.body, "windows-1251");
-                        string sign = controller.Sign(thumbPrint, body);
-                        if (controller.confirmEvent(e, body, sign))
+                        /*
+                                   just saving incoming ticket
+                        */
+                        DFSHelper.saveTicket(docSettings.LocalPath, eventName + ".xml", Utils.Base64DecodeToBytes(content.body, "windows-1251"));
+                        DFSHelper.saveTicket(docSettings.LocalPath, eventName + signExt, Utils.StringToBytes(content.sign, "UTF-8"));
+                    }
+                    else
+                    {
+                        string thumbPrint = docSettings.Thumpprint != null ? docSettings.Thumpprint : conf.Thumpprint;
+                        Ticket ticket = controller.Ticket(thumbPrint, eventName);
+                        if (ticket != null)
                         {
-                            string signExt = ".bin";
-                            if(docSettings.custom_sign_extension!=null)
-                                signExt = docSettings.custom_sign_extension;
-                            if (eventName.Contains(".xml"))
-                                eventName = eventName.Replace(".xml", string.Empty);
-                            /*
-                                saving incoming ticket
-                             */
-                            DFSHelper.saveTicket(docSettings.LocalPath, eventName + ".xml", Utils.Base64DecodeToBytes(content.body, "windows-1251"));
-                            DFSHelper.saveTicket(docSettings.LocalPath, eventName + signExt, Utils.StringToBytes(content.sign, "UTF-8"));
-                            /*
-                                saving outgoing ticket
-                             */
-                            DFSHelper.saveTicket(docSettings.TicketPath, ticket.fileName, ticket.body);
-                            DFSHelper.saveTicket(docSettings.TicketPath, ticket.fileName.Replace(".xml", signExt), Utils.StringToBytes(sign, "UTF-8"));
-                            
+                            string body = Utils.Base64Encode(ticket.body, "windows-1251");
+                            string sign = controller.Sign(thumbPrint, body);
+                            if (controller.confirmEvent(e, body, sign))
+                            {                                
+                                if (eventName.Contains(".xml"))
+                                    eventName = eventName.Replace(".xml", string.Empty);
+                                /*
+                                    saving incoming ticket
+                                 */
+                                DFSHelper.saveTicket(docSettings.LocalPath, eventName + ".xml", Utils.Base64DecodeToBytes(content.body, "windows-1251"));
+                                DFSHelper.saveTicket(docSettings.LocalPath, eventName + signExt, Utils.StringToBytes(content.sign, "UTF-8"));
+                                /*
+                                    saving outgoing ticket
+                                 */
+                                DFSHelper.saveTicket(docSettings.TicketPath, ticket.fileName, ticket.body);
+                                DFSHelper.saveTicket(docSettings.TicketPath, ticket.fileName.Replace(".xml", signExt), Utils.StringToBytes(sign, "UTF-8"));
+
+                            }
                         }
                     }
                 }
@@ -427,8 +439,14 @@ namespace SoapAPIConnector
                                 }
                                 catch (Exception e)
                                 {
-                                    Logger.error("ERROR: " + e.Message + " [ " + controller.GetIDFileFromTicket(body) + " ]");
-                                    handleSendException(e, name, sign);
+                                    try
+                                    {    
+                                        handleSendException(new Exception(e.Message + " [ " + controller.GetIDFileFromTicket(body) + " ]"), name, sign);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        handleSendException(new Exception("XML document not well formed"), name, sign);
+                                    }                                    
                                 }
                             }
                         }
@@ -471,6 +489,7 @@ namespace SoapAPIConnector
             }
             else
             {
+                Logger.error("ERROR: " + e.Message + ", file [ " + filePath + " ]");
                 if (DFSHelper.moveDocToError(Path.GetFileName(filePath), File.ReadAllBytes(filePath)))
                     File.Delete(filePath);
                 if (DFSHelper.moveDocToError(Path.GetFileName(filePath).Replace(".xml", ".bin"), Utils.StringToBytes(signBody, "UTF-8")))
