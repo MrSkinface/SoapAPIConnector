@@ -46,32 +46,23 @@ namespace APICon.Util
         {
             try
             {
-                string docType = GetDocType(fileName);
-                //Console.WriteLine("fileName: " + fileName+ "; docType: "+ docType);                
+                string docType = GetDocType(fileName);                              
                 Document docSettings = Program.conf.GetCustomInboundSettings(docType);
-                StringBuilder sb = new StringBuilder(Program.conf.Inbound.DefaultPath);
-                //Console.WriteLine("docSettings: " + docSettings);
+                StringBuilder sb = new StringBuilder(Program.conf.Inbound.DefaultPath);                
                 if (docSettings != null)
                 {
                     foreach (string path in docSettings.LocalPath)
                     {
                         if (!Directory.Exists(path))
-                            Directory.CreateDirectory(path);
-                        string signOldExt = ".bin";
-                        if (docSettings.custom_sign_extension != null)
-                            if (fileName.EndsWith(signOldExt))
-                            {
-                                string signNewExt = docSettings.custom_sign_extension;
-                                fileName = fileName.Replace(signOldExt, signNewExt);
-                            }
+                            Directory.CreateDirectory(path);                        
                         if (docType.Equals("condra", StringComparison.OrdinalIgnoreCase))
                         {
                             return saveCondra(docSettings, fileName, body, true);
                         }
                         else
                         {
-                            File.WriteAllBytes(path + fileName, body);
-                            Logger.log(fileName + " saved in " + path);
+                            File.WriteAllBytes(path + overrideName(fileName,docSettings), body);
+                            Logger.log(overrideName(fileName, docSettings) + " saved in " + path);
                         }
                     }
                 }
@@ -80,8 +71,7 @@ namespace APICon.Util
                     if (Program.conf.Inbound.SubFolders)
                         sb.Append(docType).Append("\\");
                     if (!Directory.Exists(sb.ToString()))
-                        Directory.CreateDirectory(sb.ToString());
-                    //Console.WriteLine("sb.ToString(): " + sb.ToString());
+                        Directory.CreateDirectory(sb.ToString());                    
                     File.WriteAllBytes(sb.ToString() + fileName, body);
                     Logger.log(fileName + " saved in " + sb.ToString());
                 }
@@ -100,13 +90,21 @@ namespace APICon.Util
             foreach (string path in docSettings.LocalPath)
             {
                 foreach (string entry in map.Keys)
-                {
-                    string name = entry.Equals("condra.xml", StringComparison.OrdinalIgnoreCase) ? fileName.Replace(".zip",".xml") : entry;
+                {                   
+                    string name = entry.Equals("condra.xml", StringComparison.OrdinalIgnoreCase) ? fileName.Replace(".zip",".xml") : overrideName(entry, docSettings);
                     File.WriteAllBytes(path + name, map[entry]);
                     Logger.log(name + " saved in " + path);
                 }
             }
             return true;
+        }
+        public static string overrideName(string fileName, Document setting)
+        {
+            string res = fileName;
+            if (setting.custom_sign_extension == null)
+                return res;
+            res = res.Replace(res.Split('.')[res.Split('.').Length - 1], setting.custom_sign_extension);
+            return res;
         }
         public static void saveTicket(List<string> ticketPath, string fileName, byte[] body)
         {

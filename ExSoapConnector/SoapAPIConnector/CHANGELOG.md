@@ -28,3 +28,14 @@ FEATURES
  
 * added extended log for error while sending (xml not well-formed)
 * added saving *POK tickets without signing (in timeline-mode)
+
+1.1.4.1 (2017-10-05)
+
+FIXES
+ 
+* NONE
+ 
+FEATURES
+ 
+* defining custom sgn ext. in method (dfshelper)
+* added custom sign extension to incoming condra
