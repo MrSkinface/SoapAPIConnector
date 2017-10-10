@@ -485,7 +485,11 @@ namespace SoapAPIConnector
         {
             if (e.Message.Equals("Not find successful Aperak for document invoice"))
             {
-                Logger.log("file ["+ filePath +"] will be waiting for next sending");
+                Logger.log("file [" + filePath + "] will be waiting for next sending");
+            }
+            else if (e.Message.Contains("Not authorized"))
+            {
+                Logger.log("ERROR: " + e.Message + ", file [" + filePath + "] will be waiting for next sending");
             }
             else
             {

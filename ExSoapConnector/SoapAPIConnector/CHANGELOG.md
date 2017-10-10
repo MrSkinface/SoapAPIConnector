@@ -39,3 +39,13 @@ FEATURES
  
 * defining custom sgn ext. in method (dfshelper)
 * added custom sign extension to incoming condra
+
+1.1.4.11 (2017-10-10)
+
+FIXES
+ 
+* added waiting for next try-send when not authorized error ocured
+ 
+FEATURES
+ 
+* NONE
