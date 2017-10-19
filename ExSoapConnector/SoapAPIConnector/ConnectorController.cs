@@ -275,50 +275,7 @@ namespace APICon.controller
                 return false;
             }
         }              
-        public Event[] getIncomingEvents()
-        {
-            string timeFrom = DateTime.Now.AddDays(0- conf.EDOTickets.timeline.fromMinusDays).ToString("yyyy-MM-dd HH:mm:ss");
-            string timeTo = DateTime.Now.AddDays(conf.EDOTickets.timeline.toPlusDays).ToString("yyyy-MM-dd HH:mm:ss");
-            string mode = "ESF_UPD";
-            GetTimeLineResponse response = (GetTimeLineResponse)Http2.post<GetTimeLineResponse>("https://api-service.edi.su/Api/Dixy/TimeLine/GetTimeLine", new GetTimeLineRequest(authToken, timeFrom, timeTo, mode));
-            List<Event> l = new List<Event>();
-            /**/
-            List<string> docs=new List<string>();
-            foreach (Document d in conf.EDOTickets.Document)
-            {
-                string value;
-                if(ticketTypes.TryGetValue(d.Doctype, out value))
-                    docs.Add(value);
-            }            
-            /**/
-            foreach (Event e in response.timeline)
-                if (e.event_status.Contains("RECIEVED") /*&& e.need_reply_reciept*/ && e.event_status.Length>=22)
-                {
-                    if (docs.Contains(e.event_status.Substring(0, 22)))
-                        l.Add(e);
-                }
-            Event[] incomingEvents = new Event[l.Count];
-            int i = 0;
-            foreach (Event e in l)
-                incomingEvents[i++] = e;
-            return incomingEvents;
-        }
-        public GetUnreadTimeLineResponse getUnreadEvents()
-        {
-            GetUnreadTimeLineResponse response = (GetUnreadTimeLineResponse)Http2.post<GetUnreadTimeLineResponse>("https://api-service.edi.su/Api/Dixy/TimeLine/GetUnreadTimeLine", new GetTimeLineRequest(authToken));
-            return response;
-        }
-        public bool MarkEventRead(string event_id)
-        {
-            MarkEventReadRequest request=new MarkEventReadRequest(authToken, event_id);
-            MarkEventReadResponse response = (MarkEventReadResponse)Http2.post<MarkEventReadResponse>("https://api-service.edi.su/Api/Dixy/TimeLine/MarkEventRead", request);
-            if (response.intCode == 200)
-            {
-                Logger.log("event id [" + event_id + "] marked as [READ] .");
-                return true;
-            }
-            return false;
-        }
+        
         public ApiDocument getDocInfoByEvent(Event e)
         {
             GetDocInfoRequest req = null;
@@ -381,28 +338,61 @@ namespace APICon.controller
             return response;
         }
         public GetContentResponse getUPDDocumentContent(Event e)
+        {            
+            return getUPDDocumentContent(e.document_id);
+        }
+        public GetContentResponse getUPDDocumentContent(string docGUID)
         {
-            GetUPDContentResponse response=null;
-            GetContentResponse contResp=null;
+            GetUPDContentResponse response = null;
+            GetContentResponse contResp = null;
             try
             {
-                response = (GetUPDContentResponse)Http2.post<GetUPDContentResponse>("https://api-service.edi.su/Api/Dixy/Content/GetDocWithSignContent", new GetContentRequest(authToken, e.document_id));
+                response = (GetUPDContentResponse)Http2.post<GetUPDContentResponse>("https://api-service.edi.su/Api/Dixy/Content/GetDocWithSignContent", new GetContentRequest(authToken, docGUID));
                 contResp = new GetContentResponse();
                 contResp.intCode = response.intCode;
                 contResp.varMessage = response.varMessage;
                 contResp.body = response.body;
                 contResp.sign = response.sign[0].body;
-                
+
             }
             catch (Exception ex)
             {
-                Logger.log("error while processing [" + e.document_id + "]");
+                Logger.log("error while processing [" + docGUID + "]");
                 Logger.log(response.varMessage);
                 Logger.log(ex.Message);
             }
             return contResp;
         }
-
+        public Event[] getAllBindedEventsInChain(string varDocGuid)
+        {
+            GetTimeLineRequest req = new GetTimeLineRequest(authToken, varDocGuid, true);
+            GetTimeLineResponse resp = (GetTimeLineResponse)Http2.post<GetTimeLineResponse>("https://api-service.edi.su/Api/Dixy/TimeLine/GetTimeLine", req);
+            if (resp.intCode != 200)
+                throw new Exception(resp.varMessage);
+            return resp.timeline;
+        }
+        /*  pdf print form      */
+        public string GetPdf(string id)
+        {
+            string mode = "SENT";
+            GetPdfRequest req = new GetPdfRequest(authToken, id, mode);
+            GetPdfResponse resp;
+            try
+            {
+                resp = (GetPdfResponse)Http2.post<GetPdfResponse>("https://api-service.edi.su/Api/Dixy/PrintForm/Generate", req);
+                if (resp.intCode != 200)
+                    throw new Exception(resp.varMessage);
+            }
+            catch (Exception e)
+            {
+                mode = "RECIEVED";
+                req = new GetPdfRequest(authToken, id, mode);
+                resp = (GetPdfResponse)Http2.post<GetPdfResponse>("https://api-service.edi.su/Api/Dixy/PrintForm/Generate", req);                
+            }
+            if (resp.intCode != 200)
+                throw new Exception(resp.varMessage);
+            return resp.form;
+        }
     }
     public class Ticket
     {

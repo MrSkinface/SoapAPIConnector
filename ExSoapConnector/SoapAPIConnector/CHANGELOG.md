@@ -49,3 +49,14 @@ FIXES
 FEATURES
  
 * NONE
+
+1.2.0 (2017-10-19)
+
+FIXES
+ 
+* 
+ 
+FEATURES
+ 
+* removed all timeline dealing
+* added zipping complete chains

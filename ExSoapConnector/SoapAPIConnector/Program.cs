@@ -10,6 +10,8 @@ using APICon.controller;
 using APICon.logger;
 using APICon.rest;
 using APICon.Condra;
+using APICon.Container;
+using System.Xml;
 
 namespace SoapAPIConnector
 {
@@ -89,56 +91,58 @@ namespace SoapAPIConnector
                     if (resp != null)
                         Console.WriteLine("soap O.K.");
                     break;
-            }
-            
-            // testing tickets etc.
-            //testTickets();
-            //testConf();
+            }            
+           
         }
+
         public Program(Configuration conf)
         {
             Program.conf = conf;
             this.controller= new Controller(Program.conf);
-            // TICKETS confirm (only UnRead events: mark as read after confirm)
-            if (conf.EDOTickets.Enable)
-            {
-                if (conf.EDOTickets.mode == "unread")
-                    processTicketsUnread();
-                else if (conf.EDOTickets.mode == "timeline")
-                    processTicketsTimeLine();
-                else if (conf.EDOTickets.mode == "soap")
-                    processTicketsSoap();
-            }
+            // TICKETS 
+            if (isTicketEnabled())
+                processTicketsSoap();
             else
                 Logger.log("tickets disabled in [configuration.xml]");
             // IN            
-            if (conf.Inbound.Enable)
+            if (isInboundEnabled())
                 processInbound();
             else
                 Logger.log("inbound disabled in [configuration.xml]");
             // OUT            
-            if (conf.Outbound.Enable)                
+            if (isOutboundEnabled())                
                 processOutbound();
             else
-                Logger.log("outbound disabled in [configuration.xml]");
-
-
-
-
-            //debug();
+                Logger.log("outbound disabled in [configuration.xml]");            
         }
 
-        /**/
-        public void debug()
+        private bool isTicketEnabled()
         {
-            /*List<string> outArcPaths = new List<string>();
-            foreach (Document confDoc in conf.Outbound.Document)
-                foreach (string path in confDoc.LocalArchive)
-                    outArcPaths.Add(path);
-            foreach (string name in outArcPaths)
-                Console.WriteLine(name);*/
+            if (conf.EDOTickets != null)
+                return conf.EDOTickets.Enable;
+            return false;           
         }
-        /**/
+        private bool isInboundEnabled()
+        {
+            if (conf.Inbound != null)
+                return conf.Inbound.Enable;
+            return false;
+        }
+        private bool isOutboundEnabled()
+        {
+            if (conf.Outbound != null)
+                return conf.Outbound.Enable;
+            return false;
+        }
+        private bool isChainContainerEnabled()
+        {
+            if (conf.EDOTickets != null)
+                if (conf.EDOTickets.chainContainer != null)
+                    return conf.EDOTickets.chainContainer.enable;
+            return false;
+        }
+
+
         public void testCrypto()
         {
             foreach (ExCert cert in controller.GetCertificates())
@@ -160,7 +164,8 @@ namespace SoapAPIConnector
                 }
             }
         }
-        /**/
+       
+        
         public void processTicketsSoap()
         {
             Logger.log("start processing tickets...");
@@ -188,9 +193,16 @@ namespace SoapAPIConnector
                     {
                         Event e = new Event();
                         e.document_id = name.Split('_')[5].Replace(".xml", "").Replace(".zip", "");
+                        /*
+                         if one of 3 final tickets => perform check for conf and do chainContainer
+                         */
+                        string[] s = { "DP_IZVPOL", "ON_SCHFDOPPOK", "DP_UVUTOCH" , "ON_KORSCHFDOPPOK" };
+                        if(isChainContainerEnabled())
+                            if (s.Contains(name.Split('_')[0] + "_" + name.Split('_')[1]))
+                                e.performChainContainer = true;
                         evnts.Add(e);
                     }
-            }            
+            }
             foreach (Event e in evnts)
                 if (signAndConfirmEvent(e))
                 {
@@ -198,50 +210,8 @@ namespace SoapAPIConnector
                         if (name.Contains(e.document_id))
                             if (controller.archiveDoc(name))
                                 Logger.log(name + " removed from server .");
-                }
+                }            
         }
-        public void processTicketsTimeLine()
-        {            
-            Event[] events= controller.getIncomingEvents();            
-            foreach (Event e in events)                
-            if (signAndConfirmEvent(e))
-                controller.MarkEventRead(e.event_id);
-        }
-        public void processTicketsUnread()
-        {
-            /**/
-            List<string> docs = new List<string>();
-            foreach (Document d in conf.EDOTickets.Document)
-            {
-                string value;
-                if (Controller.ticketTypes.TryGetValue(d.Doctype, out value))
-                    docs.Add(value);
-            }            
-            /**/
-
-            int count = controller.getUnreadEvents().total_events_count;
-            Event[] events;            
-            for (int i=0;i<=(count / 100); i++)
-            {                
-                events = controller.getUnreadEvents().timeline;
-                foreach (Event e in events)
-                {
-                    if(e.event_status.Contains("NEW") || e.event_status.Contains("ERROR") || e.event_status.Length<22)
-                        controller.MarkEventRead(e.event_id);
-                    else if(!e.need_reply_reciept)
-                        controller.MarkEventRead(e.event_id);
-                    else if(!docs.Contains(e.event_status.Substring(0, 22)))
-                        controller.MarkEventRead(e.event_id);
-                    else if (signAndConfirmEvent(e))
-                            controller.MarkEventRead(e.event_id);
-                }
-                events = null;
-            }
-        }
-        /**/
-
-
-
 
         public bool signAndConfirmEvent(Event e)
         {            
@@ -260,6 +230,7 @@ namespace SoapAPIConnector
                     if (docSettings.custom_sign_extension != null)
                         signExt = docSettings.custom_sign_extension;
 
+                    Dictionary<string, byte[]> additionalTicketsToBeChained = new Dictionary<string, byte[]>();
                     if (!docSettings.TicketsGenerate)
                     {
                         /*
@@ -288,12 +259,19 @@ namespace SoapAPIConnector
                                 /*
                                     saving outgoing ticket
                                  */
+                                additionalTicketsToBeChained.Add(ticket.fileName, ticket.body);
+                                additionalTicketsToBeChained.Add(ticket.fileName.Replace(".xml", signExt), Utils.StringToBytes(sign, "UTF-8"));
                                 DFSHelper.saveTicket(docSettings.TicketPath, ticket.fileName, ticket.body);
                                 DFSHelper.saveTicket(docSettings.TicketPath, ticket.fileName.Replace(".xml", signExt), Utils.StringToBytes(sign, "UTF-8"));
 
                             }
                         }
                     }
+                    /*
+                     check if need to be contained
+                    */
+                    if (e.performChainContainer)
+                        performChainContainer(e.document_id, additionalTicketsToBeChained);
                 }
                 return true;
             }
@@ -304,6 +282,51 @@ namespace SoapAPIConnector
                 return false;
             }
         }
+
+        private void performChainContainer(string document_id, Dictionary<string, byte[]> additionalTicketsToBeChained)
+        {
+            APICon.Container.ChainContainer container = new APICon.Container.ChainContainer();
+
+            Event[] e = controller.getAllBindedEventsInChain(document_id);
+            foreach (Event ev in e)
+            {
+                //Console.WriteLine(ev.ToString());
+
+                GetContentResponse cr = controller.getUPDDocumentContent(ev.document_id);
+                string name = controller.GetIDFileFromTicket(cr.body);               
+                container.AddEntry(name+".xml", Utils.StringToBytes(cr.body, "windows-1251"));
+                container.AddEntry(name+".bin", Utils.StringToBytes(cr.sign, "UTF-8"));
+                if (ev.event_status.StartsWith("УПД"))
+                {
+                    byte[] pdf = Utils.Base64DecodeToBytes(controller.GetPdf(ev.document_id), "UTF-8");
+                    container.AddEntry(name + ".pdf", pdf);
+                    container.docFunction = GetTextFromXml(cr.body,"Файл/Документ/@Функция");
+                    string[] s = { "КСЧФ", "КСЧФДИС", "ДИС" };
+                    container.docNumber = GetTextFromXml(cr.body, s.Contains(container.docFunction) ? "Файл/Документ/СвКСчФ/@НомерКСчФ" : "Файл/Документ/СвСчФакт/@НомерСчФ");
+                    container.docDate = GetTextFromXml(cr.body, s.Contains(container.docFunction) ? "Файл/Документ/СвКСчФ/@ДатаКСчФ" : "Файл/Документ/СвСчФакт/@ДатаСчФ");
+                    container.SetContainerName();
+                }
+            }
+            foreach (string key in additionalTicketsToBeChained.Keys)
+                container.AddEntry(key, additionalTicketsToBeChained[key]);
+            DFSHelper.saveContainer(container);            
+        }
+        private string GetTextFromXml(string base64content, string xPathPattern)
+        {
+            try
+            {
+                XmlDocument xml = new XmlDocument();
+                xml.LoadXml(Utils.Base64Decode(base64content, "windows-1251"));
+                return xml.SelectSingleNode(xPathPattern).InnerText;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.StackTrace);
+                Logger.log(e.Message);
+                return null;
+            }
+        }
+
         public void processInbound()
         {
             Logger.log("start processing inbound...");

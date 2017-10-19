@@ -44,16 +44,18 @@ namespace APICon.conf
         [XmlAttribute(AttributeName = "ticketsGenerate")]
         public bool TicketsGenerate { get; set; }
     }
+    [XmlRoot]
+    public class ChainContainer
+    {
+        [XmlAttribute]
+        public bool enable { get; set; }
+        [XmlText]
+        public string value { get; set; }
+    }
 
     [XmlRoot(ElementName = "inbound")]
     public class InboundOutbound
-    {
-        /**/
-        [XmlAttribute(AttributeName = "mode")]
-        public string mode { get; set; }
-        [XmlElement(ElementName = "timeline")]
-        public TicketsTimeLine timeline { get; set; }
-        /**/
+    {        
         [XmlElement(ElementName = "defaultPath")]
         public string DefaultPath { get; set; }
         [XmlElement(ElementName = "defaultArchive")]
@@ -70,17 +72,11 @@ namespace APICon.conf
         public bool SubFolders { get; set; }
         [XmlAttribute(AttributeName = "downloadALL")]
         public bool DownloadALL { get; set; }
-    }
-    /**/
-    [XmlRoot(ElementName = "timeline")]
-    public class TicketsTimeLine
-    {
-        [XmlElement(ElementName = "fromMinusDays")]
-        public double fromMinusDays { get; set; }
-        [XmlElement(ElementName = "toPlusDays")]
-        public double toPlusDays { get; set; }
-    }
-    /**/
+
+        /*  for local container storage*/
+        [XmlElement(ElementName = "chainContainer")]
+        public ChainContainer chainContainer { get; set; }
+    }    
 
     [XmlRoot(ElementName = "configuration")]
     public class Configuration

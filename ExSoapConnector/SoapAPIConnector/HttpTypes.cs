@@ -426,6 +426,17 @@ namespace APICon.rest
             this.exchangeid = exchangeid;
             base.varToken = authToken;
         }
+        public GetTimeLineRequest(string authToken, string varDocGUID, bool isVarDocGuid)
+        {
+            if (isVarDocGuid)
+            {
+                this.varDocGUID = varDocGUID;
+                this.mode = "UPD";
+            }
+            else
+                throw new Exception("bad request " + varDocGUID + "_" + isVarDocGuid);
+            base.varToken = authToken;
+        }
         public GetTimeLineRequest(string authToken, string timefrom, string timeto, string mode)
         {
             this.timefrom = timefrom;
@@ -446,6 +457,8 @@ namespace APICon.rest
         public string timeto { get; set; }
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public string exchangeid { get; set; }
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public string varDocGUID { get; set; }
     }
     public class GetUnreadTimeLineResponse : GetTimeLineResponse
     {
@@ -465,6 +478,8 @@ namespace APICon.rest
         public bool need_reply_reciept { get; set; }
         public string recipient_id { get; set; }
         public string sender_id { get; set; }
+
+        public bool performChainContainer { get; set; }
         override
         public string ToString()
         {
@@ -476,6 +491,7 @@ namespace APICon.rest
                 + "\n\texchangeid: " + exchangeid
                 + "\n\tneed_reply_reciept: " + need_reply_reciept
                 + "\n\trecipient_id: " + recipient_id
+                + "\n\tperformChainContainer: " + performChainContainer
                 + "\n\tsender_id: " + sender_id;
         }
     }
@@ -504,6 +520,22 @@ namespace APICon.rest
     public class GetDocInfoResponse : Response
     {
         public ApiDocument document { get; set; }
+    }
+    public class GetPdfRequest : Request
+    {
+        public GetPdfRequest() { }
+        public GetPdfRequest(string authToken, string identifier, string mode)
+        {
+            this.identifier = identifier;
+            this.mode = mode;
+            base.varToken = authToken;
+        }
+        public string identifier { get; set; }
+        public string mode { get; set; } /* SENT, RECIEVED */
+    }
+    public class GetPdfResponse : Response
+    {
+        public string form { get; set; }
     }
     public class ApiDocument
     {

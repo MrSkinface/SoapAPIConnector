@@ -6,6 +6,7 @@ using System.IO;
 using APICon.conf;
 using APICon.logger;
 using SoapAPIConnector;
+using APICon.Container;
 
 namespace APICon.Util
 {
@@ -182,6 +183,28 @@ namespace APICon.Util
                 Console.WriteLine(ex.StackTrace);//debug only
                 Logger.log(ex.Message);
                 return false;
+            }
+        }
+
+        public static void saveContainer(APICon.Container.ChainContainer container)
+        {
+            try
+            {                
+                byte[] containerBody = ZipHelper.zipChainContainer(container);
+
+                string path = Program.conf.EDOTickets.chainContainer.value;
+                Console.WriteLine(container.docDate.Split('.')[0]);
+                path += container.docDate.Split('.')[1]+"."+ container.docDate.Split('.')[2];
+                if (!Directory.Exists(path))
+                    Directory.CreateDirectory(path);
+                if (!path.EndsWith("\\")) path += "\\";
+                File.WriteAllBytes(path + container.name, containerBody);
+                Logger.log("container [" + container.name + "] saved to [" + path + "]");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.StackTrace);
+                Logger.log(e.Message);                
             }
         }
     }

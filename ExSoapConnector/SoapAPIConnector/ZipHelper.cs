@@ -5,6 +5,7 @@ using System.Text;
 using System.IO;
 using ICSharpCode.SharpZipLib.Zip;
 using ICSharpCode.SharpZipLib.Core;
+using APICon.Container;
 
 namespace APICon.Util
 {
@@ -43,6 +44,25 @@ namespace APICon.Util
             zipStream = addZipEntry(zipStream, "condra.xml", Encoding.UTF8.GetBytes(Utils.Base64Decode(xmlBody, "UTF-8")));
             zipStream = addZipEntry(zipStream, bodyName, Encoding.UTF8.GetBytes(Utils.Base64Decode(body, "UTF-8")));
             zipStream = addZipEntry(zipStream, signName, Encoding.UTF8.GetBytes(sign));
+
+            zipStream.IsStreamOwner = false;
+            zipStream.Close();
+            outputMemoryStream.Position = 0;
+            zipByteArray = outputMemoryStream.ToArray();
+
+            return zipByteArray;
+        }
+        public static byte[] zipChainContainer(ChainContainer container)
+        {
+            byte[] zipByteArray = null;
+
+            MemoryStream outputMemoryStream = new MemoryStream();
+            ZipOutputStream zipStream = new ZipOutputStream(outputMemoryStream);
+
+            foreach (string key in container.containedEntries.Keys)
+            {
+                zipStream = addZipEntry(zipStream, key, container.containedEntries[key]);
+            }
 
             zipStream.IsStreamOwner = false;
             zipStream.Close();

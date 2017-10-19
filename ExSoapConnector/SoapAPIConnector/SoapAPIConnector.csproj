@@ -74,6 +74,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ChainContainer.cs" />
     <Compile Include="CondraXml.cs" />
     <Compile Include="Configuration.cs" />
     <Compile Include="ConnectorController.cs" />
