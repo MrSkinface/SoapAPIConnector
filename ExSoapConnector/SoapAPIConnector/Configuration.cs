@@ -49,6 +49,8 @@ namespace APICon.conf
     {
         [XmlAttribute]
         public bool enable { get; set; }
+        [XmlAttribute]
+        public bool useSubFolders { get; set; }
         [XmlText]
         public string value { get; set; }
     }

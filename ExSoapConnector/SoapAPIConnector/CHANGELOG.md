@@ -71,3 +71,13 @@ FIXES
 FEATURES
  
 *
+
+1.2.2 (2017-10-24)
+
+FIXES
+ 
+*
+
+FEATURES
+ 
+* added 'useSubFolders' to chain container' config

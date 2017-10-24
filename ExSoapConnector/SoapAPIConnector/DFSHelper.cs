@@ -193,8 +193,8 @@ namespace APICon.Util
                 byte[] containerBody = ZipHelper.zipChainContainer(container);
 
                 string path = Program.conf.EDOTickets.chainContainer.value;
-                Console.WriteLine(container.docDate.Split('.')[0]);
-                path += container.docDate.Split('.')[1]+"."+ container.docDate.Split('.')[2];
+                if(Program.conf.EDOTickets.chainContainer.useSubFolders)
+                    path += container.docDate.Split('.')[1]+"."+ container.docDate.Split('.')[2];
                 if (!Directory.Exists(path))
                     Directory.CreateDirectory(path);
                 if (!path.EndsWith("\\")) path += "\\";
