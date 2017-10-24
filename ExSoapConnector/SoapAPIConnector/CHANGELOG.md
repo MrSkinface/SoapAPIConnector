@@ -60,3 +60,14 @@ FEATURES
  
 * removed all timeline dealing
 * added zipping complete chains
+
+1.2.1 (2017-10-24)
+
+FIXES
+ 
+* fixed double extension in chain container
+* fixed base64 un-encoded xml in chain container
+ 
+FEATURES
+ 
+*

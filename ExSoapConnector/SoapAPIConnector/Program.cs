@@ -210,7 +210,8 @@ namespace SoapAPIConnector
                         if (name.Contains(e.document_id))
                             if (controller.archiveDoc(name))
                                 Logger.log(name + " removed from server .");
-                }            
+                } 
+                            
         }
 
         public bool signAndConfirmEvent(Event e)
@@ -293,8 +294,8 @@ namespace SoapAPIConnector
                 //Console.WriteLine(ev.ToString());
 
                 GetContentResponse cr = controller.getUPDDocumentContent(ev.document_id);
-                string name = controller.GetIDFileFromTicket(cr.body);               
-                container.AddEntry(name+".xml", Utils.StringToBytes(cr.body, "windows-1251"));
+                string name = GetTextFromXml(cr.body, "Файл[@*]/@ИдФайл");               
+                container.AddEntry(name+".xml", Utils.Base64DecodeToBytes(cr.body, "windows-1251"));
                 container.AddEntry(name+".bin", Utils.StringToBytes(cr.sign, "UTF-8"));
                 if (ev.event_status.StartsWith("УПД"))
                 {
