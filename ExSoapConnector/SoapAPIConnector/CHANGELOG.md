@@ -81,3 +81,14 @@ FIXES
 FEATURES
  
 * added 'useSubFolders' to chain container' config
+
+1.2.3 (2017-10-26)
+
+FIXES
+ 
+*
+
+FEATURES
+ 
+* added signs extensions to chain container
+* added signs encoding (bool [isBase64] => base64 or raw/binary ) 

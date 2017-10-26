@@ -51,6 +51,10 @@ namespace APICon.conf
         public bool enable { get; set; }
         [XmlAttribute]
         public bool useSubFolders { get; set; }
+        [XmlAttribute]
+        public bool codeBase { get; set; }
+        [XmlAttribute]
+        public string signExtension { get; set; }
         [XmlText]
         public string value { get; set; }
     }

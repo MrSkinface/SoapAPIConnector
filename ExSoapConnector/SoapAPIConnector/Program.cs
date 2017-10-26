@@ -210,8 +210,8 @@ namespace SoapAPIConnector
                         if (name.Contains(e.document_id))
                             if (controller.archiveDoc(name))
                                 Logger.log(name + " removed from server .");
-                } 
-                            
+                }
+                
         }
 
         public bool signAndConfirmEvent(Event e)
@@ -259,9 +259,9 @@ namespace SoapAPIConnector
                                 DFSHelper.saveTicket(docSettings.LocalPath, eventName + signExt, Utils.StringToBytes(content.sign, "UTF-8"));
                                 /*
                                     saving outgoing ticket
-                                 */
+                                 */ 
                                 additionalTicketsToBeChained.Add(ticket.fileName, ticket.body);
-                                additionalTicketsToBeChained.Add(ticket.fileName.Replace(".xml", signExt), Utils.StringToBytes(sign, "UTF-8"));
+                                additionalTicketsToBeChained.Add(ticket.fileName.Replace(".xml", GetSignExtensionForContainer()), GetSignEncodedBodyForContainer(sign));
                                 DFSHelper.saveTicket(docSettings.TicketPath, ticket.fileName, ticket.body);
                                 DFSHelper.saveTicket(docSettings.TicketPath, ticket.fileName.Replace(".xml", signExt), Utils.StringToBytes(sign, "UTF-8"));
 
@@ -294,9 +294,9 @@ namespace SoapAPIConnector
                 //Console.WriteLine(ev.ToString());
 
                 GetContentResponse cr = controller.getUPDDocumentContent(ev.document_id);
-                string name = GetTextFromXml(cr.body, "Файл[@*]/@ИдФайл");               
+                string name = GetTextFromXml(cr.body, "Файл[@*]/@ИдФайл");
                 container.AddEntry(name+".xml", Utils.Base64DecodeToBytes(cr.body, "windows-1251"));
-                container.AddEntry(name+".bin", Utils.StringToBytes(cr.sign, "UTF-8"));
+                container.AddEntry(name + GetSignExtensionForContainer(), GetSignEncodedBodyForContainer(cr.sign));
                 if (ev.event_status.StartsWith("УПД"))
                 {
                     byte[] pdf = Utils.Base64DecodeToBytes(controller.GetPdf(ev.document_id), "UTF-8");
@@ -312,6 +312,24 @@ namespace SoapAPIConnector
                 container.AddEntry(key, additionalTicketsToBeChained[key]);
             DFSHelper.saveContainer(container);            
         }
+
+        private string GetSignExtensionForContainer()
+        {
+            string extension = ".bin";
+            if (conf.EDOTickets.chainContainer.signExtension != null)
+                extension = conf.EDOTickets.chainContainer.signExtension;
+            return extension;
+        }
+        private byte[] GetSignEncodedBodyForContainer(string base64sign)
+        {
+            byte[] signBody;
+            if (conf.EDOTickets.chainContainer.codeBase)
+                signBody = Utils.StringToBytes(base64sign, "UTF-8");
+            else
+                signBody = Utils.Base64DecodeToBytes(base64sign, "UTF-8");
+            return signBody;
+        }
+
         private string GetTextFromXml(string base64content, string xPathPattern)
         {
             try
