@@ -145,6 +145,10 @@ namespace APICon.controller
             try
             {
                 string uuid = fileName.Split('_')[5].Replace(".xml", "");
+                if (fileName.StartsWith("DP_OTORG1_") || fileName.StartsWith("DP_OTORG2_"))
+                {
+                    return TicketTorg(thumbprint, fileName);
+                }
                 ExCert cert = GetExCertificate(thumbprint);
                 ExSigner signer = new ExSigner(cert);
                 response = (CreateTicketResponse)Http2.post<CreateTicketResponse>("https://api-service.edi.su/Api/Dixy/Ticket/Generate", new CreateTicketRequest(authToken, uuid, signer));
@@ -164,12 +168,54 @@ namespace APICon.controller
                 return null;
             }
         }
+        public Ticket TicketTorg(string thumbprint, string fileName)
+        {
+            CreateAnswerResponse response = null;
+            try
+            {
+                string uuid = fileName.Split('_')[5].Replace(".xml", "");
+                ExCert cert = GetExCertificate(thumbprint);
+                ExSigner signer = new ExSigner(cert);
+                CreateAnswerRequest req = new CreateAnswerRequest(authToken, uuid, new AnswerData(signer));
+                response = (CreateAnswerResponse)Http2.post<CreateAnswerResponse>("https://api-service.edi.su/Api/Dixy/Ticket/Generate", req);
+                if (response.intCode != 200)
+                {
+                    Logger.log("for file [" + fileName + "] :" + response.varMessage);
+                    return null;
+                }
+                string name = GetIDFileFromTicket(response.content);
+                byte[] body = Utils.Base64DecodeToBytes(response.content, "windows-1251");
+                return new Ticket(name, body);
+            }
+            catch (Exception ex)
+            {
+                Logger.log("for file [" + fileName + "] :" + response.varMessage);
+                Logger.log(ex.Message);
+                return null;
+            }
+        }
         /**/
+
+        public string GetIDFileFromTicket(string ticketContent, Event e)
+        {
+            if (e.soapFileName.Contains("DP_OTORG1_") || e.soapFileName.Contains("DP_OTORG2_"))
+            {
+                return GetIDFileFromTicket(ticketContent, "UTF-8");
+            }
+            else
+            {
+                return GetIDFileFromTicket(ticketContent, "windows-1251");
+            }                
+        }
         public string GetIDFileFromTicket(string ticketContent)
+        {
+            return GetIDFileFromTicket(ticketContent, "windows-1251");
+        }
+        public string GetIDFileFromTicket(string ticketContent, string encoding)
         {
             try
             {
-                string xmlString = Utils.Base64Decode(ticketContent, "windows-1251");
+                string xmlString = Utils.Base64Decode(ticketContent, encoding);
                 XmlDocument xml = new XmlDocument();
                 xml.LoadXml(xmlString);
                 return xml.SelectSingleNode("/Файл[@*]/@ИдФайл").InnerText + ".xml";
@@ -177,7 +223,7 @@ namespace APICon.controller
             catch (Exception e)
             {
                 Logger.error(e.StackTrace);
-                throw e;                
+                throw e;
             }
         }
         private string authorize()
@@ -322,6 +368,29 @@ namespace APICon.controller
                 return false;
             }
         }
+
+        public GetContentResponse GetContent(Event e)
+        {
+            GetContentResponse response = null;
+            if (e.soapFileName.Contains("DP_OTORG"))
+            {
+                response = getDocumentContent(e);
+                if (response.intCode != 200)
+                {
+                    response = getUPDDocumentContent(e);
+                }
+            }
+            else
+            {
+                response = getUPDDocumentContent(e);
+                if (response.intCode != 200)
+                {
+                    response = getDocumentContent(e);
+                }
+            }
+            return response;
+        }
+
         public GetContentResponse getDocumentContent(Event e)
         {
             GetContentResponse response = null;

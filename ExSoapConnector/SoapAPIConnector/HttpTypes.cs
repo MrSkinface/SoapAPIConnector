@@ -305,6 +305,31 @@ namespace APICon.rest
             this.rec_position = recieptInfo.receptionistPosition;
             this.rec_sname = recieptInfo.receptionistSurName;
         }
+        public AnswerData(ExSigner signer)
+        {
+            string[] name = signer.givenName.Split(' ');
+            if (name.Length > 1)
+            {
+                this.signer_fname = name[0];
+                this.rec_fname = name[0];
+                this.signer_patronymic = name[1];
+                this.rec_patronymic = name[1];
+            }
+            else
+            {
+                this.signer_fname = signer.givenName;
+                this.rec_fname = signer.givenName;
+                this.signer_patronymic = signer.givenName;
+                this.rec_patronymic = signer.givenName;
+            }
+            this.signer_sname = signer.surName;
+            this.rec_sname = signer.surName;
+
+            this.signer_position = signer.orgPosition;
+            this.rec_position = signer.orgPosition;
+
+            this.signer_inn = signer.inn;            
+        }
         public string rec_date { get; set; }
         public string rec_fname { get; set; }
         public string rec_patronymic { get; set; }
@@ -478,6 +503,8 @@ namespace APICon.rest
         public bool need_reply_reciept { get; set; }
         public string recipient_id { get; set; }
         public string sender_id { get; set; }
+
+        public string soapFileName { get; set; }
 
         public bool performChainContainer { get; set; }
         override

@@ -101,7 +101,7 @@ namespace SoapAPIConnector
             this.controller= new Controller(Program.conf);
             // TICKETS 
             if (isTicketEnabled())
-                processTicketsSoap();
+                processTickets();
             else
                 Logger.log("tickets disabled in [configuration.xml]");
             // IN            
@@ -166,7 +166,7 @@ namespace SoapAPIConnector
         }
        
         
-        public void processTicketsSoap()
+        public void processTickets()
         {
             Logger.log("start processing tickets...");
             List <string> names = null;
@@ -193,6 +193,7 @@ namespace SoapAPIConnector
                     {
                         Event e = new Event();
                         e.document_id = name.Split('_')[5].Replace(".xml", "").Replace(".zip", "");
+                        e.soapFileName = name;
                         /*
                          if one of 3 final tickets => perform check for conf and do chainContainer
                          */
@@ -218,11 +219,9 @@ namespace SoapAPIConnector
         {            
             try
             {
-                //Console.WriteLine(e.document_id);
-                GetContentResponse content = controller.getUPDDocumentContent(e);
-                if (content.intCode != 200)
-                    content = controller.getDocumentContent(e);
-                string eventName = controller.GetIDFileFromTicket(content.body);
+                GetContentResponse content = controller.GetContent(e);
+
+                string eventName = controller.GetIDFileFromTicket(content.body, e);
                 string docType = eventName.Split('_')[0] + "_" + eventName.Split('_')[1];
                 Document docSettings = conf.GetCustomEDOTicketSettings(docType);
                 if (docSettings != null)
@@ -239,6 +238,11 @@ namespace SoapAPIConnector
                         */
                         DFSHelper.saveTicket(docSettings.LocalPath, eventName + ".xml", Utils.Base64DecodeToBytes(content.body, "windows-1251"));
                         DFSHelper.saveTicket(docSettings.LocalPath, eventName + signExt, Utils.StringToBytes(content.sign, "UTF-8"));
+
+                        /*
+                        when configured -> creating xml status
+                        */
+                        DFSHelper.saveStatus(controller, content.body, docSettings, null);
                     }
                     else
                     {
@@ -265,6 +269,10 @@ namespace SoapAPIConnector
                                 DFSHelper.saveTicket(docSettings.TicketPath, ticket.fileName, ticket.body);
                                 DFSHelper.saveTicket(docSettings.TicketPath, ticket.fileName.Replace(".xml", signExt), Utils.StringToBytes(sign, "UTF-8"));
 
+                                /*
+                                when configured -> creating xml status
+                                */
+                                DFSHelper.saveStatus(controller, content.body, docSettings, null);
                             }
                         }
                     }
@@ -388,10 +396,10 @@ namespace SoapAPIConnector
         public void processOutbound()
         {
             Logger.log("start processing outbound...");
-            List<string> outbound=null;            
+            List<string> outbound = new List<string>();            
             try
             {
-                outbound = Directory.GetFiles(conf.Outbound.DefaultPath).ToList();
+                outbound.AddRange(Directory.GetFiles(conf.Outbound.DefaultPath).ToList());
             }
             catch (Exception ex)
             {
@@ -478,11 +486,19 @@ namespace SoapAPIConnector
                                         if (DFSHelper.moveDocToArc(Path.GetFileName(name).Replace(".xml", ".bin"), Utils.StringToBytes(sign, "UTF-8"), docSettings))
                                             File.Delete(name.Replace(".xml", ".bin"));
                                     }
+                                    /*
+                                     when configured -> creating xml status
+                                     */
+                                    DFSHelper.saveStatus(controller, body, docSettings, null);
                                 }
                                 catch (Exception e)
                                 {
                                     try
-                                    {    
+                                    {
+                                        /*
+                                        when configured -> creating xml status
+                                        */
+                                        DFSHelper.saveStatus(controller, body, docSettings, e.Message);
                                         handleSendException(new Exception(e.Message + " [ " + controller.GetIDFileFromTicket(body) + " ]"), name, sign);
                                     }
                                     catch (Exception ex)

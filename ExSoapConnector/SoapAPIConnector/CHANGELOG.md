@@ -92,3 +92,14 @@ FEATURES
  
 * added signs extensions to chain container
 * added signs encoding (bool [isBase64] => base64 or raw/binary ) 
+
+1.2.4 (2017-12-04)
+
+FIXES
+ 
+*
+
+FEATURES
+ 
+* added TORG1/TORG2 sign/confirm
+* added xml status files creating for UPD/UKD, PDPOL, IZVPOL, UVUTOCH, POK

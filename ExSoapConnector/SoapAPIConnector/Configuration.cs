@@ -43,6 +43,9 @@ namespace APICon.conf
         public bool NeedToBeZipped { get; set; }
         [XmlAttribute(AttributeName = "ticketsGenerate")]
         public bool TicketsGenerate { get; set; }
+        /**/
+        [XmlElement(ElementName = "status")]
+        public string status { get; set; }
     }
     [XmlRoot]
     public class ChainContainer

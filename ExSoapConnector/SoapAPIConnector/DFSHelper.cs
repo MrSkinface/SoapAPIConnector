@@ -7,6 +7,10 @@ using APICon.conf;
 using APICon.logger;
 using SoapAPIConnector;
 using APICon.Container;
+using APICon.Status;
+using System.Xml;
+using APICon.Util;
+using APICon.controller;
 
 namespace APICon.Util
 {
@@ -183,6 +187,94 @@ namespace APICon.Util
                 Console.WriteLine(ex.StackTrace);//debug only
                 Logger.log(ex.Message);
                 return false;
+            }
+        }
+
+        public static void saveStatus(Controller controller,string base64body, Document doc, string errorMessage)
+        {
+            if (doc.status != null && doc.status.Length != 0)
+            {
+                StatusXml status = new StatusXml();
+                if (errorMessage != null)
+                {
+                    status.Description = errorMessage;
+                    status.Status = "2";
+                }
+                string fileName = GetTextFromXml(base64body, "Файл/@ИдФайл");
+                status.MessageClass = fileName.Split('_')[0] + "_" + fileName.Split('_')[1];
+                /*
+                set parent file name , status code , from , to and number
+                */
+                status = DefineStatusInfo(controller, status, base64body);                
+
+                List<string> path = new List<string>();
+                path.Add(doc.status);
+                saveTicket(path, status.fileName, Utils.StringToBytes(Utils.ToXml(status, "UTF-8"), "UTF-8"));
+            }
+        }
+        private static StatusXml DefineStatusInfo(Controller controller, StatusXml status, string base64body)
+        {            
+            string path = null;
+            switch (status.MessageClass)
+            {
+                case "ON_SCHFDOPPR":
+                case "ON_KORSCHFDOPPR":
+                    path = "Файл/@ИдФайл";
+                    if (status.Status != "2")
+                        status.Status = "0";
+                    break;
+                case "DP_PDPOL":
+                    path = "Файл/Документ/СведПодтв/СведОтпрФайл/@ИмяПостФайла";
+                    status.Status = "1";
+                    break;
+                case "DP_UVUTOCH":
+                    path = "Файл/Документ/СвУведУточ/СведПолФайл/@ИмяПостФайла";
+                    status.Status = "4";
+                    status.Description = GetTextFromXml(base64body, "Файл/Документ/СвУведУточ/ТекстУведУточ");
+                    break;
+                case "DP_IZVPOL":
+                    path = "Файл/Документ/СвИзвПолуч/СведПолФайл/@ИмяПостФайла";
+                    status.Status = "3";
+                    break;
+                case "ON_SCHFDOPPOK":
+                case "ON_KORSCHFDOPPOK":
+                    path = "Файл/ИнфПок/ИдИнфПрод/@ИдФайлИнфПр";
+                    status.Status = "3";
+                    break;
+            }
+            status.StatusOnFileName = GetTextFromXml(base64body, path);
+
+            /*
+            body of parent doc
+            if current doc not one of ON_SCHFDOPPR, ON_KORSCHFDOPPR we need to find body of parent doc
+            */
+            string body = base64body;
+            if (!status.MessageClass.Contains("SCHFDOPPR"))
+            {
+                string docGuidToFind = status.StatusOnFileName.Split('_')[5];
+                body = controller.getUPDDocumentContent(docGuidToFind).body;
+            }            
+
+            status.From = GetTextFromXml(body, "Файл/СвУчДокОбор/@ИдОтпр");
+            status.To = GetTextFromXml(body, "Файл/СвУчДокОбор/@ИдПол");
+            status.EXiteICID = GetTextFromXml(body, "Файл/Документ/СвСчФакт/@НомерСчФ"); ;
+            status.CustomerICID = GetTextFromXml(body, "Файл/Документ/СвСчФакт/@НомерСчФ");
+
+            return status;
+        }
+        private static string GetTextFromXml(string base64content, string xPathPattern)
+        {
+            try
+            {
+                XmlDocument xml = new XmlDocument();
+                xml.LoadXml(Utils.Base64Decode(base64content, "windows-1251"));
+                return xml.SelectSingleNode(xPathPattern).InnerText;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.StackTrace);
+                Logger.log("error while getting value [" + xPathPattern + "] . " + e.Message);
+                return null;
             }
         }
 
