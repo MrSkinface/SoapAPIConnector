@@ -9,6 +9,7 @@ using System.Xml;
 using System.IO;
 using APICon.Util;
 using SoapAPIConnector;
+using SoapAPIConnector.ExiteSoapService;
 
 namespace APICon.soap
 {
