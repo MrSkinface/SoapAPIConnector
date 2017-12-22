@@ -32,7 +32,7 @@ namespace APICon.Util
         }
         public static string[] GetOutFiles(List<Document>doc)
         {
-            List<String> res = new List<string>();
+            List<string> res = new List<string>();
             foreach (Document confDoc in doc)
                 foreach (string path in confDoc.LocalPath)
                 {
@@ -111,15 +111,51 @@ namespace APICon.Util
             res = res.Replace(res.Split('.')[res.Split('.').Length - 1], setting.custom_sign_extension);
             return res;
         }
+
+        public static void saveDFSFile(ExDFSFile file)
+        {            
+            if (file.settings.LocalPath != null)
+            {
+                saveTicket(file.settings.LocalPath, file.fileName, file.body);
+                saveTicket(file.settings.LocalPath, file.fileName.Replace(".xml",".bin"), file.sign);
+            }
+            else
+            {
+                if (Program.conf.EDOTickets.DefaultPath != null)
+                {
+                    saveTicket(Program.conf.EDOTickets.DefaultPath, file.fileName, file.body);
+                    saveTicket(Program.conf.EDOTickets.DefaultPath, file.fileName.Replace(".xml", ".bin"), file.sign);
+                }
+            }
+            if (file.ticket != null)
+            {
+                if (file.settings.TicketPath != null)
+                {
+                    saveTicket(file.settings.TicketPath, file.ticket.fileName, file.ticket.body);
+                    byte[] base64bytesSign = Utils.StringToBytes(Convert.ToBase64String(file.ticket.sign), "windows-1251");
+                    saveTicket(file.settings.TicketPath, file.ticket.fileName.Replace(".xml", ".bin"), base64bytesSign);
+                }
+            }
+        }
         public static void saveTicket(List<string> ticketPath, string fileName, byte[] body)
         {
             foreach (string path in ticketPath)
             {
-                if (!Directory.Exists(path))
-                    Directory.CreateDirectory(path);
-                File.WriteAllBytes(path + fileName, body);
-                Logger.log(fileName + " saved in " + path);
+                saveTicket(path, fileName, body);
             }
+        }
+        public static void saveTicket(string ticketPath, string fileName, byte[] body)
+        {
+            if (!Directory.Exists(ticketPath))
+                Directory.CreateDirectory(ticketPath);
+            File.WriteAllBytes(ticketPath + fileName, body);
+            Logger.log(fileName + " saved in " + ticketPath);
+        }
+        public static bool moveDocToError(ExDFSFile file)
+        {
+            moveDocToError(file.fileName,file.body);
+            File.Delete(file.fullPath);
+            return true;
         }
         public static bool moveDocToError(string fileName, byte[] body)
         {
@@ -142,9 +178,20 @@ namespace APICon.Util
                 return false;
             }
         }
+        public static bool moveDocToArc(ExDFSFile file)
+        {
+            moveDocToArc(file.fileName, file.body, file.settings);
+            if (file.sign != null)
+            {
+                byte[] baseSign = Utils.StringToBytes(Convert.ToBase64String(file.sign), "windows-1251");
+                moveDocToArc(file.fileName.Replace(".xml", ".bin"), baseSign, file.settings);
+            }
+            File.Delete(file.fullPath);
+            return true;
+        }
         public static bool moveDocToArc(string fileName, byte[] body, Document doc)
         {
-            if (doc.LocalArchive.Count != 0)
+            if (doc != null && doc.LocalArchive != null && doc.LocalArchive.Count != 0)
             {
                 foreach (string path in doc.LocalArchive)
                 {
@@ -190,9 +237,34 @@ namespace APICon.Util
             }
         }
 
-        public static void saveStatus(Controller controller,string base64body, Document doc, string errorMessage)
+        /*
+        public static void saveStatusForTicket(ExDFSFile file)
         {
-            if (doc.status != null && doc.status.Length != 0)
+            saveStatusForTicket(file, null);
+        }
+        public static void saveStatusForTicket(ExDFSFile file, string errorMessage)
+        {
+            if (file.ticket != null)
+            {
+                saveStatus(file.ticket.body, file.settings, errorMessage);
+            }
+        }*/
+
+        public static void saveStatus(ExDFSFile file)
+        {
+            saveStatus(file, null);
+        }
+        public static void saveStatus(ExDFSFile file, string errorMessage)
+        {
+            saveStatus(file.body, file.settings, errorMessage);
+        }
+        public static void saveStatus(byte[] body, Document doc, string errorMessage)
+        {
+            saveStatus(Convert.ToBase64String(body), doc, errorMessage);
+        }
+        public static void saveStatus(string base64body, Document doc, string errorMessage)
+        {
+            if (doc != null && doc.status != null && doc.status.Length != 0)
             {
                 StatusXml status = new StatusXml();
                 if (errorMessage != null)
@@ -205,14 +277,14 @@ namespace APICon.Util
                 /*
                 set parent file name , status code , from , to and number
                 */
-                status = DefineStatusInfo(controller, status, base64body);                
+                status = DefineStatusInfo(status, base64body);                
 
                 List<string> path = new List<string>();
                 path.Add(doc.status);
                 saveTicket(path, status.fileName, Utils.StringToBytes(Utils.ToXml(status, "UTF-8"), "UTF-8"));
             }
         }
-        private static StatusXml DefineStatusInfo(Controller controller, StatusXml status, string base64body)
+        private static StatusXml DefineStatusInfo(StatusXml status, string base64body)
         {            
             string path = null;
             switch (status.MessageClass)
@@ -252,7 +324,7 @@ namespace APICon.Util
             if (!status.MessageClass.Contains("SCHFDOPPR"))
             {
                 string docGuidToFind = status.StatusOnFileName.Split('_')[5];
-                body = controller.getUPDDocumentContent(docGuidToFind).body;
+                body = Controller.getUPDBase64body(docGuidToFind);
             }            
 
             status.From = GetTextFromXml(body, "Файл/СвУчДокОбор/@ИдОтпр");

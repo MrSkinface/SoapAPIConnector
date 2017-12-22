@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using System.Xml;
+using APICon.Util;
 
 namespace APICon.rest
 {
@@ -408,7 +410,8 @@ namespace APICon.rest
             base.varToken = authToken;
             this.body = body;
             this.sign = new List<UPDSign>();
-            this.sign.Add(new UPDSign(sign));
+            string sgnType = GetTextFromXml(body, "Файл/Документ/Подписант[1]/@ОблПолн");
+            this.sign.Add(new UPDSign(sign, sgnType));
             this.doc_type = doc_type;
         }
         public string body { get; set; }
@@ -418,6 +421,13 @@ namespace APICon.rest
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public string identifier { get; set; }
         public List<UPDSign> sign { get; set; }
+
+        private static string GetTextFromXml(string base64content, string xPathPattern)
+        {
+            XmlDocument xml = new XmlDocument();
+            xml.LoadXml(Utils.Base64Decode(base64content, "windows-1251"));
+            return xml.SelectSingleNode(xPathPattern).InnerText;
+        }
     }
     public class UPDSign
     {
@@ -427,7 +437,12 @@ namespace APICon.rest
         public UPDSign() { }
         public UPDSign(string sign)
         {
-            this.type = "1";
+            this.type = "6";
+            this.body = sign;
+        }
+        public UPDSign(string sign, string type)
+        {
+            this.type = type;
             this.body = sign;
         }
     }

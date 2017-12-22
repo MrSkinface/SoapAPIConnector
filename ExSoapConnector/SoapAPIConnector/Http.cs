@@ -1,80 +1,44 @@
-﻿using System;
+﻿using RestSharp;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using APICon.Util;
-using System.Net;
-using System.Security.Authentication;
-using System.IO;
-using System.Security.Cryptography.X509Certificates;
+using APICon.logger;
 using SoapAPIConnector;
 
 namespace APICon.rest
 {
     public static class Http
-    {   
+    {
+        private static string url = "https://e-vo.ru/Api/Dixy/";
+
         public static object post<Type>(string url, object data)
         {
-            return post<Type>(url, Utils.ToJson(data));
+            var client = new RestClient(Http.url + url);            
+            var request = new RestRequest(Method.POST);
+            request.AddJsonBody(data);               
+            IRestResponse response = client.Execute(request);
+            var content = response.Content;
+            debug(data,response);           
+            return Utils.FromJson<Type>(content);                    
         }
-        public static object post<Type>(string url, string data)
+
+        private static void debug(object jsonRequest, IRestResponse response)
         {
-            //Console.WriteLine(data);//debug only
-            return post<Type>(url, Encoding.GetEncoding("UTF-8").GetBytes(data));
-        }
-        public static object post<Type>(string url, byte[] data)
-        {            
-            HttpWebRequest post = (HttpWebRequest)WebRequest.Create(url);
-            ServicePointManager.ServerCertificateValidationCallback += (sender, cert, chain, error) => true;
-            
-            if (Program.conf.proxy != null)
-                if (Program.conf.proxy.Enable)
-                {                
-                    WebProxy proxy = new WebProxy();               
-                    Uri proxyUri = new Uri(Program.conf.proxy.address);
-                    proxy.Credentials = new NetworkCredential(Program.conf.proxy.login, Program.conf.proxy.password);
-                    post.Proxy = proxy;
-                }
-            /*post.KeepAlive = false;
-            post.ProtocolVersion = HttpVersion.Version10;*/
-            post.Method = "POST";
-            post.ContentType = "application/json; charset=utf-8";
-            post.ContentLength = data.Length;
-            using (Stream reqStream = post.GetRequestStream())
+            if (Program.conf.debug)
             {
-                reqStream.Write(data, 0, data.Length);
-                reqStream.Close();
-                WebResponse response=null;
-                try
-                {
-                    try
-                    {
-                        response = post.GetResponse();
-                    }
-                    catch (WebException e)
-                    {
-                        Console.WriteLine(e.StackTrace);
-                        response = e.Response;
-                    }
-                    StreamReader reader = new StreamReader(response.GetResponseStream());
-                    string responseFromServer = reader.ReadToEnd();
-                    //Console.WriteLine(responseFromServer); //debug only          
-                    return Utils.FromJson<Type>(responseFromServer);
-                }
-                finally
-                {
-                    reqStream.Close();
-                    response.Close();
-                }
-            }            
-        }
-    }
-    public class MyPolicy : ICertificatePolicy
-    {
-        public bool CheckValidationResult(ServicePoint srvPoint, X509Certificate certificate, WebRequest request, int certificateProblem)
-        {
-            return true;
+                Console.WriteLine(
+                        "ERROR: Server responded with: \nStatusCode [" + response.StatusCode + "]" +
+                        "\nStatusDescription [" + response.StatusDescription + "]." +
+                        "\nResponseUri [" + response.ResponseUri + "]." +
+                        "\nContentLength [" + response.ContentLength + "]." +
+                        "\nDebug: \nrequest body:\n" +
+                        Utils.ToJson(jsonRequest) +
+                        "\nresponse body:\n" +
+                        response.Content
+                        );
+            }
         }
     }
 }

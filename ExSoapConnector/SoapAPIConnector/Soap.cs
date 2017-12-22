@@ -10,211 +10,79 @@ using System.IO;
 using APICon.Util;
 using SoapAPIConnector;
 using SoapAPIConnector.ExiteSoapService;
+using System.ServiceModel;
+using APICon.logger;
 
 namespace APICon.soap
 {
-    /*
-    user's obj for every request 
-    */
-    [XmlRoot(ElementName = "user")]
-    public class User
-    {
-        [XmlElement(ElementName = "login")]
-        public string login { get; set; }
-        [XmlElement(ElementName = "pass")]
-        public string pass { get; set; }
-    }    
-    [XmlRoot(ElementName = "soap")]
-    public class Request
-    {
-        [XmlElement(ElementName = "user")]
-        public User user { get; set; }
-    }    
-    [XmlRoot(ElementName = "result")]
-    public class Response
-    {
-        [XmlElement(ElementName = "errorCode")]
-        public int errorCode { get; set; }
-        [XmlElement(ElementName = "errorMessage")]
-        public string errorMessage { get; set; }
-    }
 
-    /*
-    getList() 
-    */
-    public class GetListRequest : Request
-    {
-
-    }   
-    [XmlRoot(ElementName = "result")]
-    public class GetListResponse : Response
-    {
-        [XmlElement(ElementName = "list")]
-        public List<string> list { get; set; }
-    }
-    /*
-    getDoc() 
-    */
-    public class GetDocRequest : Request
-    {
-        [XmlElement(ElementName = "fileName")]
-        public string fileName { get; set; }
-    }
-    [XmlRoot(ElementName = "result")]
-    public class GetDocResponse : Response
-    {
-        [XmlElement(ElementName = "content")]
-        public string content { get; set; }
-    }
-    /*
-    sendDoc() 
-    */
-    public class SendDocRequest : Request
-    {
-        [XmlElement(ElementName = "fileName")]
-        public string fileName { get; set; }
-        [XmlElement(ElementName = "content")]
-        public string content { get; set; }
-    }
-    [XmlRoot(ElementName = "result")]
-    public class SendDocResponse : Response
-    {
-
-    }
-    /*
-    archiveDoc() 
-    */
-    public class ArchiveDocRequest : Request
-    {
-        [XmlElement(ElementName = "fileName")]
-        public string fileName { get; set; }
-    }
-    [XmlRoot(ElementName = "result")]
-    public class ArchiveDocResponse : Response
-    {
-
-    }
-
-    /*
-    static class to dealing with soap 
-    */
     public static class Soap
     {
-        public static object GetList<Type>(GetListRequest req)
-        {
-            StringBuilder sb = new StringBuilder(
-@"<soap:getList>           
-            <user>
-                <login>").
-            Append(req.user.login).Append(@"</login><pass>").
-            Append(req.user.pass).Append(@"</pass>
-            </user>
-</soap:getList>");            
-            return Action<Type>(createRequestBody(sb.ToString()));
-        }
-        public static object GetDoc<Type>(GetDocRequest req)
-        {
-            StringBuilder sb = new StringBuilder(
-@"<soap:getDoc>           
-            <user>
-                <login>").
-            Append(req.user.login).Append(@"</login><pass>").
-            Append(req.user.pass).Append(@"</pass></user>").
-            Append(@"<fileName>").Append(req.fileName).Append(@"</fileName>
-</soap:getDoc>");
-            return Action<Type>(createRequestBody(sb.ToString()));              
-        }
-        public static object SendDoc<Type>(SendDocRequest req)
-        {
-            StringBuilder sb = new StringBuilder(
-@"<soap:sendDoc>           
-            <user>
-                <login>").
-            Append(req.user.login).Append(@"</login><pass>").
-            Append(req.user.pass).Append(@"</pass></user>").
-            Append(@"<fileName>").Append(req.fileName).Append(@"</fileName><content>").
-            Append(req.content).Append(@"</content>
-</soap:sendDoc>");
-            return Action<Type>(createRequestBody(sb.ToString()));            
-        }
-        public static object ArchiveDoc<Type>(ArchiveDocRequest req)
-        {
-            StringBuilder sb = new StringBuilder(
-@"<soap:archiveDoc>           
-            <user>
-                <login>").
-            Append(req.user.login).Append(@"</login><pass>").
-            Append(req.user.pass).Append(@"</pass></user>").
-            Append(@"<fileName>").Append(req.fileName).Append(@"</fileName>
-</soap:archiveDoc>");
-            return Action<Type>(createRequestBody(sb.ToString()));           
-        }
+        private static ediLogin soapAuth;
 
-        private static string createRequestBody(string actionPart)
+        public static void Authorize(string login, string pass)
         {
-            StringBuilder sb = new StringBuilder(
-@"<soapenv:Envelope xmlns:soapenv=""http://schemas.xmlsoap.org/soap/envelope/"" xmlns:soap=""http://soap.edi.exite.org/"">
-    <soapenv:Header/>
-    <soapenv:Body>");
-            sb.Append(actionPart);
-            sb.Append(
-@"</soapenv:Body>
-</soapenv:Envelope>");
-            return sb.ToString();
+            EdiServerClient client = configureClient();
+            ediLogin user = new ediLogin();
+            user.login = login;
+            user.pass = Utils.GetMD5String(pass);
+            ediFileList response = client.getList(user);
+            if (response == null || response.errorCode != 0)
+                throw new Exception(response.errorMessage);
+            soapAuth = user;
+        }
+        public static string[] getList()
+        {
+            EdiServerClient client = configureClient();            
+            ediFileList response = client.getList(soapAuth);
+            if (response == null || response.errorCode != 0)
+                throw new Exception(response.errorMessage);
+            if (response.list == null)
+                return new string[0];
+            return response.list;
+        }        
+        public static byte[] getDoc(string fileName)
+        {
+            EdiServerClient client = configureClient();            
+            ediFile response = client.getDoc(soapAuth, fileName);
+            if (response == null || response.errorCode != 0)
+                throw new Exception(response.errorMessage);
+            return response.content;
         }
         
-        private static object Action<Type>(string requestBody)
+        public static void archiveDoc(string fileName)
         {
-            string soapUri = "https://ru-soap.edi.su/soap";
-            string badUri = "http://195.191.226.106:8080/soap";
-            HttpWebRequest webRequest =
-                Program.conf.use_non_secure_soap_connection?
-                (HttpWebRequest)WebRequest.Create(badUri)
-                :
-                (HttpWebRequest)WebRequest.Create(soapUri);
-            if (Program.conf.proxy != null)
-                if (Program.conf.proxy.Enable)
-                {               
-                    WebProxy proxy = new WebProxy();                
-                    Uri proxyUri = new Uri(Program.conf.proxy.address);
-                    proxy.Credentials = new NetworkCredential(Program.conf.proxy.login, Program.conf.proxy.password);
-                    webRequest.Proxy = proxy;
-                }
-            webRequest.Headers.Add(@"SOAP:Action");
-            webRequest.ContentType = "text/xml; charset=UTF-8";
-            webRequest.Accept = "text/xml";
-            webRequest.Method = "POST";
-            XmlDocument bodyRequest = new XmlDocument();
-            bodyRequest.LoadXml(requestBody);                 
-            using (Stream stream = webRequest.GetRequestStream())
+            EdiServerClient client = configureClient();            
+            ediResponse response = client.archiveDoc(soapAuth, fileName);
+            if (response == null || response.errorCode != 0)
+                throw new Exception(response.errorMessage);            
+        }       
+
+        public static void sendDoc(string fileName, byte[] docBody)
+        {
+            EdiServerClient client = configureClient();            
+            ediResponse response = client.sendDoc(soapAuth, fileName, docBody);
+            if (response == null || response.errorCode != 0)
+                throw new Exception(response.errorMessage);            
+        }
+
+        private static EdiServerClient configureClient()
+        {
+            try
             {
-                bodyRequest.Save(stream);
-                WebResponse response = null;
-                try
-                {
-                    response = webRequest.GetResponse();
-                    XmlReader reader;
-                    using (reader = XmlReader.Create(response.GetResponseStream()))
-                    {
-                        reader.ReadToFollowing("result");
-                        reader = reader.ReadSubtree();
-                        StringBuilder sb = new StringBuilder();
-                        while (reader.Read())
-                            sb.Append(reader.ReadOuterXml());                        
-                        return Utils.FromXml<Type>(sb.ToString(), "UTF-8");
-                    }
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.StackTrace);
-                    return null;
-                }
-                finally
-                {
-                    stream.Close();
-                    response.Close();
-                }                
-            }                      
+                BasicHttpBinding binding = new BasicHttpBinding();
+                binding.Security.Mode = BasicHttpSecurityMode.Transport;
+                binding.Security.Transport.ClientCredentialType = HttpClientCredentialType.None;
+                binding.MaxReceivedMessageSize = Int32.MaxValue;
+                EndpointAddress endpoint = new EndpointAddress("https://ru-soap.edi.su/soap/?wsdl");
+                EdiServerClient client = new EdiServerClient(binding, endpoint);
+                return client;
+            }
+            catch (Exception e)
+            {                
+                Logger.log(e.StackTrace);
+                throw e;
+            }
         }
     }
 }

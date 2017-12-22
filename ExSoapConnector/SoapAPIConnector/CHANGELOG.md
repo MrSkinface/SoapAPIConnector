@@ -103,3 +103,13 @@ FEATURES
  
 * added TORG1/TORG2 sign/confirm
 * added xml status files creating for UPD/UKD, PDPOL, IZVPOL, UVUTOCH, POK
+
+2.0.0alpha (2017-12-22)
+
+FIXES
+ 
+* FULL REFACTORING
+
+FEATURES
+ 
+* SOAP as web service link

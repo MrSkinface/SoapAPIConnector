@@ -10,278 +10,302 @@ using APICon.soap;
 using APICon.Util;
 using APICon.rest;
 using APICon.logger;
+using SoapAPIConnector;
 
 namespace APICon.controller
-{
-    public interface IController
-    {
-        List<string> getList();
-        bool sendDoc(string fileName, string base64data);
-        bool sendDocApi(string content, string sign, string docType);
-        bool archiveDoc(string name);
-        byte[] getDoc(string name);
-        Ticket Ticket(string thumbprint,string uuid);
-        bool sendTicket(string content, string sign, string docId);
-        string Sign(string thumbprint,string base64data);
-        ExCert GetExCertificate(string thumbprint);
-        string[] GetCertificateNames();        
-    }
+{    
 
-    public class Controller : IController
-    {
-        public static Dictionary<string, string> ticketTypes = new Dictionary<string, string>();        
-
-        private Configuration conf;
-        private string authToken;
-        public Controller() { }
-        public Controller(Configuration conf)
+    public static class Controller
+    {          
+        public static void init()
         {
-            this.conf = conf;
-            this.authToken= authorize();
-
-            ticketTypes.Add("DP_PDPOL", "ПодтверждениеДатыПоступления".Substring(0, 22));
-            ticketTypes.Add("DP_PDOTPR", "ПодтверждениеДатыОтправки".Substring(0, 22));
-            ticketTypes.Add("DP_UVUTOCH", "УведомлениеОбУточнении".Substring(0, 22));
-            ticketTypes.Add("DP_IZVPOL", "ИзвещениеПолученияУПДПокупатель".Substring(0, 22));
-            ticketTypes.Add("ON_SCHFDOPPOK", "ИнформацияПокупателяRECIEVED".Substring(0, 22));
+            RestHelper.authorize(Program.conf.Login, Program.conf.Api_pass);
+            Soap.Authorize(Program.conf.Login, Program.conf.Soap_pass);
+            Logger.loadConfig();
         }
 
-        public bool archiveDoc(string name)
+        public static void ShowUsage()
         {
-            ArchiveDocRequest req = new ArchiveDocRequest();
-            req.user = new User();
-            req.user.login = conf.Login;
-            req.user.pass = Utils.GetMD5String(conf.Soap_pass);
-            req.fileName = name;
-            ArchiveDocResponse resp = (ArchiveDocResponse)Soap.ArchiveDoc<ArchiveDocResponse>(req);
-            if (resp.errorCode != 0)
-            {
-                Logger.log("ERROR: " + resp.errorMessage);
-                throw new Exception(resp.errorMessage);
-            }                
-            return resp.errorCode == 0;
+            Console.WriteLine("Usage: ");
+            Console.WriteLine("\t-allcerts\t-\tshow all certificates info");            
+            Console.WriteLine("\t-testcert\t-\ttesting sign methods for 2nd arg certificate by thumbprint");
+            Console.WriteLine("\t-testrest\t-\ttesting http connection to web-services");
+            Console.WriteLine("\t-testsoap\t-\ttesting http connection to soap-services");
         }
-        public byte[] getDoc(string name)
-        {
-            GetDocRequest req = new GetDocRequest();
-            req.user = new User();
-            req.user.login = conf.Login;
-            req.user.pass = Utils.GetMD5String(conf.Soap_pass);
-            req.fileName = name;
-            GetDocResponse resp = (GetDocResponse)Soap.GetDoc<GetDocResponse>(req);
-            if (resp.errorCode != 0)
-                throw new Exception(resp.errorMessage);
-            return Utils.Base64DecodeToBytes(resp.content,"UTF-8");
-        }
-        public List<string> getList()
-        {
-            GetListRequest req = new GetListRequest();
-            req.user = new User();
-            req.user.login = conf.Login;
-            req.user.pass = Utils.GetMD5String(conf.Soap_pass);
-            GetListResponse resp = (GetListResponse)Soap.GetList<GetListResponse>(req);
-            if (resp.errorCode != 0)
-                throw new Exception(resp.errorMessage);            
-            return resp.list;
-        }
-        public bool sendDoc(string fileName, string base64data)
-        {
-            SendDocRequest req = new SendDocRequest();
-            req.user = new User();
-            req.user.login = conf.Login;
-            req.user.pass = Utils.GetMD5String(conf.Soap_pass);
-            req.fileName = fileName;
-            req.content = base64data;
-            SendDocResponse resp = (SendDocResponse)Soap.SendDoc<SendDocResponse>(req);
-            if (resp.errorCode != 0)
-            {                
-                Logger.log("ERROR: " + resp.errorMessage);
-                throw new Exception(resp.errorMessage);
-            }
-            return resp.errorCode == 0;
-        }
-        public bool sendDocApi(string content, string sign, string docType)
-        {
-            APICon.rest.Request req = null;
-            if (docType.StartsWith("ON_SCHF")|| docType.StartsWith("ON_KORSCHF"))
-                req = new DocumentUPDSendRequest(authToken, content, sign, docType);
-            else
-                req = new DocumentSendRequest(authToken, content, sign, docType);            
-            DocumentSendResponse response = (DocumentSendResponse)Http2.post<DocumentSendResponse>("https://api-service.edi.su/Api/Dixy/Document/Send", req);
-            if (response.intCode == 200)
-                return true;
-            throw new Exception(response.varMessage);
-        }        
-        public string Sign(string thumbprint, string base64data)
-        {
-            CAdESCOM.CPStore store = new CAdESCOM.CPStore();
-            store.Open();
-            try
-            {
-                CAPICOM.Certificate cert = GetCertByThumbprint(store, thumbprint);
-                CAdESCOM.CPSigner signer = new CAdESCOM.CPSigner();
-                signer.Certificate = cert;
-                signer.TSAAddress = "http://cryptopro.ru/tsp/";               
-                CAdESCOM.CadesSignedData signedData = new CAdESCOM.CadesSignedData();
-                signedData.ContentEncoding = CAdESCOM.CADESCOM_CONTENT_ENCODING_TYPE.CADESCOM_BASE64_TO_BINARY;
-                signedData.Content = base64data;
-                try
-                {
-                    return signedData.SignCades(signer, CAdESCOM.CADESCOM_CADES_TYPE.CADESCOM_CADES_BES, true);
-                }
-                catch (Exception e)
-                {
-                    throw new Exception("Sign error", e);
-                }
-            }
-            finally
-            {
-                store.Close();
-            }
-        }
-        public Ticket Ticket(string thumbprint, string fileName)
-        {
-            CreateTicketResponse response = null;
-            try
-            {
-                string uuid = fileName.Split('_')[5].Replace(".xml", "");
-                if (fileName.StartsWith("DP_OTORG1_") || fileName.StartsWith("DP_OTORG2_"))
-                {
-                    return TicketTorg(thumbprint, fileName);
-                }
-                ExCert cert = GetExCertificate(thumbprint);
-                ExSigner signer = new ExSigner(cert);
-                response = (CreateTicketResponse)Http2.post<CreateTicketResponse>("https://api-service.edi.su/Api/Dixy/Ticket/Generate", new CreateTicketRequest(authToken, uuid, signer));
-                if (response.intCode != 200)
-                {
-                    Logger.log("for file [" + fileName + "] :" + response.varMessage);
-                    return null;
-                }
-                string name = GetIDFileFromTicket(response.content);
-                byte[] body = Utils.Base64DecodeToBytes(response.content, "windows-1251");
-                return new Ticket(name, body);
-            }
-            catch (Exception ex)
-            {
-                Logger.log("for file [" + fileName + "] :" + response.varMessage);
-                Logger.log(ex.Message);
-                return null;
-            }
-        }
-        public Ticket TicketTorg(string thumbprint, string fileName)
-        {
-            CreateAnswerResponse response = null;
-            try
-            {
-                string uuid = fileName.Split('_')[5].Replace(".xml", "");
-                ExCert cert = GetExCertificate(thumbprint);
-                ExSigner signer = new ExSigner(cert);
-                CreateAnswerRequest req = new CreateAnswerRequest(authToken, uuid, new AnswerData(signer));
-                response = (CreateAnswerResponse)Http2.post<CreateAnswerResponse>("https://api-service.edi.su/Api/Dixy/Ticket/Generate", req);
-                if (response.intCode != 200)
-                {
-                    Logger.log("for file [" + fileName + "] :" + response.varMessage);
-                    return null;
-                }
-                string name = GetIDFileFromTicket(response.content);
-                byte[] body = Utils.Base64DecodeToBytes(response.content, "windows-1251");
-                return new Ticket(name, body);
-            }
-            catch (Exception ex)
-            {
-                Logger.log("for file [" + fileName + "] :" + response.varMessage);
-                Logger.log(ex.Message);
-                return null;
-            }
-        }
-        /**/
 
-        public string GetIDFileFromTicket(string ticketContent, Event e)
-        {
-            if (e.soapFileName.Contains("DP_OTORG1_") || e.soapFileName.Contains("DP_OTORG2_"))
-            {
-                return GetIDFileFromTicket(ticketContent, "UTF-8");
-            }
-            else
-            {
-                return GetIDFileFromTicket(ticketContent, "windows-1251");
-            }                
-        }
-        public string GetIDFileFromTicket(string ticketContent)
-        {
-            return GetIDFileFromTicket(ticketContent, "windows-1251");
-        }
-        public string GetIDFileFromTicket(string ticketContent, string encoding)
+        public static void CertsList()
         {
             try
             {
-                string xmlString = Utils.Base64Decode(ticketContent, encoding);
-                XmlDocument xml = new XmlDocument();
-                xml.LoadXml(xmlString);
-                return xml.SelectSingleNode("/Файл[@*]/@ИдФайл").InnerText + ".xml";
+                ExCert[] certs = GetCertificates();
+                Console.WriteLine("CSP Store has [" + certs.Length + "] certificates");
+                foreach (ExCert cert in certs)
+                {
+                    Console.WriteLine("cert info :");
+                    Console.WriteLine(cert.ToString());                    
+                }
             }
             catch (Exception e)
             {
-                Logger.error(e.StackTrace);
-                throw e;
+                Console.WriteLine(e.Message);
             }
         }
-        private string authorize()
+
+        public static void TestCertificate(string thumbPrint)
         {
-            string login = conf.Login;
-            string password = conf.Api_pass;
-            AuthorizeResponse response;
+            byte[] sign = null;
+            byte[] content = Encoding.GetEncoding("UTF-8").GetBytes("somedata");
             try
             {
-                response = (AuthorizeResponse)Http2.post<AuthorizeResponse>("https://api-service.edi.su/Api/Dixy/Index/Authorize", new AuthorizeRequest(login, password));
-                return response.varToken;
+                sign = getSign(thumbPrint, content, "UTF-8");
+                if (sign != null)
+                    Console.WriteLine("signing O.K.");
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                Logger.log("ERROR: api auth fails. Api funcs will NOT be able . Reason : " + ex.Message);
-                return null;
-            }            
+                Console.WriteLine("signing fails: " + e.Message);
+            }
         }
-        /**/
-        public ExCert GetExCertificate(string thumbprint)
+
+        public static void TestRestConnection()
+        {
+            RestHelper.authorize(Program.conf.Login, Program.conf.Api_pass);
+            Console.WriteLine("rest O.K.");
+            
+        }
+
+        public static void TestSoapConnection()
+        {
+            Soap.Authorize(Program.conf.Login, Program.conf.Soap_pass);
+            Console.WriteLine("soap O.K.");
+        }
+
+        public static void archiveDoc(string name)
+        {
+            Soap.archiveDoc(name);
+            Logger.log(name + " removed from server");
+        }
+
+        public static void archiveDocByID(string id)
+        {
+            string fileName = getFileNameByDocGUID(id);
+            if (fileName == null)
+                throw new Exception("No such ID was found [" + id + "]");
+            archiveDoc(fileName);
+        }
+
+        private static string getFileNameByDocGUID(string docGUID)
+        {
+            foreach (string name in getList())
+                if (name.Contains(docGUID))
+                    return name;
+            return null;
+        }
+
+        public static string[] GetCertificateNames()
+        {
+            throw new NotImplementedException();
+        }
+
+        public static byte[] getDoc(string name)
+        {
+            return Soap.getDoc(name);
+        }
+        public static byte[] getBinForDoc(string fileName)
+        {
+            return getDoc(fileName.Replace(".xml", ".bin"));
+        }
+        public static void archiveBinForDoc(string fileName)
+        {
+            archiveDoc(fileName.Replace(".xml", ".bin"));
+        }
+        public static void archiveDocAndSign(string fileName)
+        {
+            archiveDoc(fileName);
+            archiveBinForDoc(fileName);
+        }
+        public static void archiveDFSFile(ExDFSFile file)
+        {
+            archiveDocAndSign(file.fileName);
+        }
+
+        public static ExCert GetExCertificate(string thumbprint)
+        {
+            return new ExCert(GetCertByThumbprint(thumbprint));
+        }
+
+        public static List<string> getList()
+        {
+            return Soap.getList().ToList();
+        }
+
+        public static List<string> getList(string filter)
+        {
+            List<string> list = new List<string>();
+            foreach (string file in getList())
+            {
+                if (file.StartsWith(filter))
+                {
+                    list.Add(file);
+                }
+            }
+            return list;
+        }
+        public static List<string> getList(string filter, string ending)
+        {
+            List<string> list = new List<string>();
+            foreach (string file in getList(filter))
+            {
+                if (file.EndsWith(ending))
+                {
+                    list.Add(file);
+                }
+            }
+            return list;
+        }
+        public static List<string> getList(List<string> filters)
+        {
+            List<string> list = new List<string>();
+            foreach (string filter in filters)
+            {
+                list.AddRange(getList(filter));
+            }
+            return list;
+        }
+        public static List<string> getList(List<string> filters, string ending)
+        {
+            List<string> list = new List<string>();
+            foreach (string file in getList(filters))
+            {
+                if (file.EndsWith(ending))
+                {
+                    list.Add(file);
+                }
+            }
+            return list;
+        }
+
+        public static byte[] getSign(string thumbprint, byte[] content, string encoding)
+        {
+            string baseSign = getSign(thumbprint, Utils.Base64Encode(content, encoding));
+            return Utils.Base64DecodeToBytes(baseSign, encoding);
+        }
+
+        public static string getSign(string thumbprint, string base64data)
         {
             CAdESCOM.CPStore store = new CAdESCOM.CPStore();
             store.Open();
             try
             {
-                CAPICOM.ICertificates icerts = store.Certificates;
-                ExCert[] certs = new ExCert[icerts.Count];
-                int i = 0;
-                foreach (CAPICOM.Certificate cert in store.Certificates)
-                {
-                    if (cert.Thumbprint.Equals(thumbprint) && cert.HasPrivateKey()) return new ExCert(cert);
-                }
-                throw new Exception("No certificate was found by thumbprint ["+ thumbprint + "]");
+                CAPICOM.Certificate cert = GetCertByThumbprint(thumbprint);
+                CAdESCOM.CPSigner signer = new CAdESCOM.CPSigner();
+                signer.Certificate = cert;
+                signer.TSAAddress = "http://cryptopro.ru/tsp/";
+                CAdESCOM.CadesSignedData signedData = new CAdESCOM.CadesSignedData();
+                signedData.ContentEncoding = CAdESCOM.CADESCOM_CONTENT_ENCODING_TYPE.CADESCOM_BASE64_TO_BINARY;
+                signedData.Content = base64data;
+                return signedData.SignCades(signer, CAdESCOM.CADESCOM_CADES_TYPE.CADESCOM_CADES_BES, true);
             }
             finally
             {
                 store.Close();
             }
         }
-        private CAPICOM.Certificate GetCertByThumbprint(CAdESCOM.CPStore store, string thumbprint)
+
+        private static CAPICOM.Certificate GetCertByThumbprint(string thumbprint)
         {
-            foreach (CAPICOM.Certificate cert in store.Certificates)
+            CAdESCOM.CPStore store = new CAdESCOM.CPStore();
+            store.Open();
+            try
             {
-                if (cert.Thumbprint.Equals(thumbprint) && cert.HasPrivateKey()) return cert;
+                foreach (CAPICOM.Certificate cert in store.Certificates)
+                {
+                    if (cert.Thumbprint.Equals(thumbprint))
+                    {
+                        if (cert.HasPrivateKey())
+                        {
+                            return cert;
+                        }
+                        throw new Exception("Certificate [" + thumbprint + "] has no private key");
+                    }
+                }
+                throw new Exception("No certificate was found by thumbprint [" + thumbprint + "]");
             }
-            throw new Exception("No certificate was found by thumbprint [" + thumbprint + "]");
+            finally
+            {
+                store.Close();
+            }            
         }
-        public string[] GetCertificateNames()
+
+        public static Ticket getTicket(string thumbprint, string uuid)
         {
-            ExCert[] certs = GetCertificates();
-            string[] result = new string[certs.Length];
-            for (int i = 0; i < certs.Length; i++)
-            {
-                result[i] = certs[i].Name;
-            }
-            return result;
+            ExSigner signer = getSignerForTicket(thumbprint);
+            byte[] body = RestHelper.getTicket(signer, uuid);
+            byte[] sign = getSign(thumbprint, body, "windows-1251");
+            string xmlString = Utils.BytesToString(body, "windows-1251");
+            string name = Utils.GetTextFromXml(xmlString, "/Файл[@*]/@ИдФайл", ".xml");
+            return new Ticket(name, body, sign);
         }
-        public ExCert[] GetCertificates()
+        private static ExSigner getSignerForTicket(string thumbprint)
+        {
+            CAPICOM.Certificate cert = GetCertByThumbprint(thumbprint);
+            ExCert exCert = GetExCertificate(thumbprint);
+            return new ExSigner(exCert);
+        }
+        public static ExCert GetExCertificate(CAPICOM.Certificate cert)
+        {
+            return new ExCert(cert);
+        }
+        public static Ticket getTicket(ExDFSFile file)
+        {
+            string thumbprint = file.settings.Thumpprint != null ? file.settings.Thumpprint : Program.conf.Thumpprint;
+            Ticket ticket =  getTicket(thumbprint, getUUID(file.fileName));
+            ticket.sign = getSign(thumbprint, ticket.body, "windows-1251");
+            return ticket;
+        }
+        private static string getUUID(string fileName)
+        {
+            return fileName.Split('_')[5].Split('.')[0];
+        }
+        
+
+        public static void sendDoc(string fileName, byte[] body)
+        {
+            Soap.sendDoc(fileName, body);
+            Logger.log(fileName + " sent");
+        }
+
+        public static void sendDoc(string fileName, string base64data)
+        {
+            sendDoc(fileName, Convert.FromBase64String(base64data));
+        }
+
+        public static void sendDocApi(string content, string sign, string docType)
+        {
+            RestHelper.send(content, sign, docType);
+        }
+
+        public static void sendTicket(ExDFSFile file)
+        {            
+            sendTicket(file.ticket.body, file.ticket.sign, getUUID(file.fileName));
+            Logger.log(file.fileName + " confirmed");
+        }
+        public static void sendTicket(byte[] content, byte[] sign, string docId)
+        {
+            RestHelper.sendTicket(content, sign, docId);
+        }
+
+        public static string getUPDBase64body(string varDocGuid)
+        {
+            return RestHelper.getUPDDocumentContent(varDocGuid).body;
+        }
+
+        public static void sendTicket(string base64content, string base64sign, string docId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public static ExCert[] GetCertificates()
         {
             CAdESCOM.CPStore store = new CAdESCOM.CPStore();
             store.Open();
@@ -301,178 +325,25 @@ namespace APICon.controller
                 store.Close();
             }
         }
-        public bool sendTicket(string content, string sign, string docId)
-        {
-            EnqueueTicketRequest req = null;
-            EnqueueTicketResponse enqueueResponse = null;
-            try
-            {
-                req = new EnqueueTicketRequest(authToken, docId, content, sign);
-                enqueueResponse = (EnqueueTicketResponse)Http2.post<EnqueueTicketResponse>("https://api-service.edi.su/Api/Dixy/Ticket/Enqueue", req);
-                if (enqueueResponse.intCode == 200)
-                    return true;
-                return false;
-            }
-            catch (Exception ex)
-            {
-                Logger.log("error while processing [" + docId + "]");
-                Logger.log(enqueueResponse.varMessage);
-                Logger.log(ex.Message);
-                return false;
-            }
-        }              
-        
-        public ApiDocument getDocInfoByEvent(Event e)
-        {
-            GetDocInfoRequest req = null;
-            GetDocInfoResponse resp = null;
-            GetContentResponse content = null;
-            try
-            {
-                req = new GetDocInfoRequest(authToken, e.document_id);                
-                resp = (GetDocInfoResponse)Http2.post<GetDocInfoResponse>("https://api-service.edi.su/Api/Dixy/TimeLine/GetDocData", req);                
-                if (resp.intCode == 200)
-                {
-                    content = getDocumentContent(e);
-                    resp.document.file_body = content.body;
-                    resp.document.sign_body = content.sign;
-                    return resp.document;
-                }
-                return null;
-            }
-            catch (Exception ex)
-            {
-                Logger.log("error while processing [" + e.document_id + "]");
-                Logger.log(resp.varMessage);
-                Logger.log(ex.Message);
-                return null;
-            }
-        }
-        
-        public bool confirmEvent(Event e, string body, string sign)
-        {
-            EnqueueTicketResponse enqueueResponse=null;
-            try
-            {
-                EnqueueTicketRequest req = new EnqueueTicketRequest(authToken, e.document_id, body, sign);
-                enqueueResponse = (EnqueueTicketResponse)Http2.post<EnqueueTicketResponse>("https://api-service.edi.su/Api/Dixy/Ticket/Enqueue", req);
-                if (enqueueResponse.intCode == 200)
-                    return true;
-                return false;
-            }
-            catch (Exception ex)
-            {
-                Logger.log("error while processing ["+ e.document_id+"]");
-                Logger.log(enqueueResponse.varMessage);
-                Logger.log(ex.Message);
-                return false;
-            }
-        }
-
-        public GetContentResponse GetContent(Event e)
-        {
-            GetContentResponse response = null;
-            if (e.soapFileName.Contains("DP_OTORG"))
-            {
-                response = getDocumentContent(e);
-                if (response.intCode != 200)
-                {
-                    response = getUPDDocumentContent(e);
-                }
-            }
-            else
-            {
-                response = getUPDDocumentContent(e);
-                if (response.intCode != 200)
-                {
-                    response = getDocumentContent(e);
-                }
-            }
-            return response;
-        }
-
-        public GetContentResponse getDocumentContent(Event e)
-        {
-            GetContentResponse response = null;
-            try
-            {
-                response = (GetContentResponse)Http2.post<GetContentResponse>("https://api-service.edi.su/Api/Dixy/Content/GetBoth", new GetContentRequest(authToken, e.document_id));
-            }
-            catch (Exception ex)
-            {
-                Logger.log("error while processing [" + e.document_id + "]");
-                Logger.log(response.varMessage);
-                Logger.log(ex.Message);
-            }
-            return response;
-        }
-        public GetContentResponse getUPDDocumentContent(Event e)
-        {            
-            return getUPDDocumentContent(e.document_id);
-        }
-        public GetContentResponse getUPDDocumentContent(string docGUID)
-        {
-            GetUPDContentResponse response = null;
-            GetContentResponse contResp = null;
-            try
-            {
-                response = (GetUPDContentResponse)Http2.post<GetUPDContentResponse>("https://api-service.edi.su/Api/Dixy/Content/GetDocWithSignContent", new GetContentRequest(authToken, docGUID));
-                contResp = new GetContentResponse();
-                contResp.intCode = response.intCode;
-                contResp.varMessage = response.varMessage;
-                contResp.body = response.body;
-                contResp.sign = response.sign[0].body;
-
-            }
-            catch (Exception ex)
-            {
-                Logger.log("error while processing [" + docGUID + "]");
-                Logger.log(response.varMessage);
-                Logger.log(ex.Message);
-            }
-            return contResp;
-        }
-        public Event[] getAllBindedEventsInChain(string varDocGuid)
-        {
-            GetTimeLineRequest req = new GetTimeLineRequest(authToken, varDocGuid, true);
-            GetTimeLineResponse resp = (GetTimeLineResponse)Http2.post<GetTimeLineResponse>("https://api-service.edi.su/Api/Dixy/TimeLine/GetTimeLine", req);
-            if (resp.intCode != 200)
-                throw new Exception(resp.varMessage);
-            return resp.timeline;
-        }
-        /*  pdf print form      */
-        public string GetPdf(string id)
-        {
-            string mode = "SENT";
-            GetPdfRequest req = new GetPdfRequest(authToken, id, mode);
-            GetPdfResponse resp;
-            try
-            {
-                resp = (GetPdfResponse)Http2.post<GetPdfResponse>("https://api-service.edi.su/Api/Dixy/PrintForm/Generate", req);
-                if (resp.intCode != 200)
-                    throw new Exception(resp.varMessage);
-            }
-            catch (Exception e)
-            {
-                mode = "RECIEVED";
-                req = new GetPdfRequest(authToken, id, mode);
-                resp = (GetPdfResponse)Http2.post<GetPdfResponse>("https://api-service.edi.su/Api/Dixy/PrintForm/Generate", req);                
-            }
-            if (resp.intCode != 200)
-                throw new Exception(resp.varMessage);
-            return resp.form;
-        }
     }
+
     public class Ticket
     {
         public string fileName { get; set; }
         public byte[] body { get; set; }
+        public byte[] sign { get; set; }
 
         public Ticket() { }
         public Ticket(string fileName, byte[] body)
         {
             this.fileName = fileName;
             this.body = body;
+        }
+        public Ticket(string fileName, byte[] body, byte[] sign)
+        {
+            this.fileName = fileName;
+            this.body = body;
+            this.sign = sign;
         }
     }
 }

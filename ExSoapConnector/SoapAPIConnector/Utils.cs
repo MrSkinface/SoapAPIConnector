@@ -117,5 +117,16 @@ namespace APICon.Util
                 return sb.ToString();
             }
         }
+
+        public static string GetTextFromXml(string xmlString, string xPathPattern, string extension)
+        {
+            return GetTextFromXml(xmlString, xPathPattern) + extension;
+        }
+        public static string GetTextFromXml(string xmlString, string xPathPattern)
+        {
+            XmlDocument xml = new XmlDocument();
+            xml.LoadXml(xmlString);
+            return xml.SelectSingleNode(xPathPattern).InnerText;
+        }
     }
 }

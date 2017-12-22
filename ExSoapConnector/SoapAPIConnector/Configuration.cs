@@ -7,19 +7,7 @@ using System.IO;
 using System.Xml.Serialization;
 
 namespace APICon.conf
-{
-    [XmlRoot(ElementName = "proxy")]
-    public class Proxy
-    {
-        [XmlAttribute(AttributeName = "enable")]
-        public bool Enable { get; set; }
-        [XmlElement(ElementName = "address")]
-        public string address { get; set; }        
-        [XmlElement(ElementName = "login")]
-        public string login { get; set; }
-        [XmlElement(ElementName = "password")]
-        public string password { get; set; }
-    }
+{    
     [XmlRoot(ElementName = "document")]
     public class Document
     {
@@ -90,8 +78,8 @@ namespace APICon.conf
     [XmlRoot(ElementName = "configuration")]
     public class Configuration
     {
-        [XmlElement(ElementName = "use_non_secure_soap_connection")]
-        public bool use_non_secure_soap_connection { get; set; }
+        [XmlAttribute(AttributeName = "debug")]
+        public bool debug { get; set; }
         [XmlElement(ElementName = "login")]
         public string Login { get; set; }
         [XmlElement(ElementName = "soap_pass")]
@@ -108,8 +96,7 @@ namespace APICon.conf
         public InboundOutbound Outbound { get; set; }
         [XmlElement(ElementName = "EDOTickets")]
         public InboundOutbound EDOTickets { get; set; }
-        [XmlElement(ElementName = "proxy")]
-        public Proxy proxy { get; set; }
+        
 
         public Document GetCustomInboundSettings(string docType)
         {

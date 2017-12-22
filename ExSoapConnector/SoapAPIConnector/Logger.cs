@@ -17,10 +17,7 @@ namespace APICon.logger
         {
             logPath = Program.conf.LogFile;
         }
-        public static void loadConfig(Configuration conf)
-        {
-            logPath = conf.LogFile;
-        }
+        
         public static void log(string message)
         {
             StringBuilder sb = new StringBuilder(logPath);
