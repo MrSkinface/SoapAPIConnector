@@ -114,7 +114,7 @@ namespace APICon.Util
 
         public static void saveDFSFile(ExDFSFile file)
         {            
-            if (file.settings.LocalPath != null)
+            if (file.settings.LocalPath.Count > 0)
             {
                 saveTicket(file.settings.LocalPath, file.fileName, file.body);
                 saveTicket(file.settings.LocalPath, file.fileName.Replace(".xml",".bin"), file.sign);
@@ -129,7 +129,7 @@ namespace APICon.Util
             }
             if (file.ticket != null)
             {
-                if (file.settings.TicketPath != null)
+                if (file.settings.TicketPath.Count > 0)
                 {
                     saveTicket(file.settings.TicketPath, file.ticket.fileName, file.ticket.body);
                     byte[] base64bytesSign = Utils.StringToBytes(Convert.ToBase64String(file.ticket.sign), "windows-1251");
@@ -256,7 +256,10 @@ namespace APICon.Util
         }
         public static void saveStatus(ExDFSFile file, string errorMessage)
         {
-            saveStatus(file.body, file.settings, errorMessage);
+            if (file.settings.status != null && file.body != null)
+            {
+                saveStatus(file.body, file.settings, errorMessage);
+            }
         }
         public static void saveStatus(byte[] body, Document doc, string errorMessage)
         {

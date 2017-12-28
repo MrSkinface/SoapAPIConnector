@@ -113,3 +113,14 @@ FIXES
 FEATURES
  
 * SOAP as web service link
+
+2.0.0beta (2017-12-28)
+
+FIXES
+ 
+* change getting body from soap to rest
+* optimized some internal method calls
+
+FEATURES
+ 
+*

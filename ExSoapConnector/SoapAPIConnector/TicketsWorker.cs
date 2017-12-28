@@ -13,7 +13,10 @@ namespace SoapAPIConnector
     {
         public TicketsWorker()
         {
-            run();
+            if (isEnabled())
+            {
+                run();
+            }                
         }
 
         private void run()
@@ -23,12 +26,15 @@ namespace SoapAPIConnector
             {
                 List<ExDFSFile> files = getFiles();
                 foreach (ExDFSFile f in files)
-                {                    
+                {
+                    /*Logger.log("processing [" + f.fileName + "]");*/
+
                     try
                     {
                         ExDFSFile file = f.settings.TicketsGenerate ? getTicket(f) : f;
-                        if(file.ticket != null)
-                            Controller.sendTicket(file);
+                        file = getBody(file);
+                        if (file.ticket != null)
+                            Controller.sendTicket(file);                        
                         Controller.archiveDFSFile(file);
                         DFSHelper.saveDFSFile(file);
                         DFSHelper.saveStatus(file);
@@ -36,7 +42,8 @@ namespace SoapAPIConnector
                             ContainerController.performChainContainer(file);
                     }
                     catch (Exception e)
-                    {                        
+                    {
+                        Console.WriteLine(e.StackTrace);           
                         Logger.log("while processing [" + f.fileName + "] " + e.Message);
                         if(e.Message.Contains("Document already queued"))
                             Controller.archiveDFSFile(f);
@@ -50,6 +57,13 @@ namespace SoapAPIConnector
             Logger.log("tickets processed");
         }
 
+        private bool isEnabled()
+        {
+            if (Program.conf.EDOTickets != null)
+                return Program.conf.EDOTickets.Enable;
+            return false;
+        }
+
         private List<ExDFSFile> getFiles()
         {
             List<ExDFSFile> files = new List<ExDFSFile>();            
@@ -57,10 +71,8 @@ namespace SoapAPIConnector
             {
                 try
                 {
-                    Document setting = getSetting(fileName);
-                    byte[] body = Controller.getDoc(fileName);
-                    byte[] sign = Controller.getBinForDoc(fileName);
-                    files.Add(new ExDFSFile(null, setting, fileName, body, sign));
+                    Document setting = getSetting(fileName);                    
+                    files.Add(new ExDFSFile(null, setting, fileName, null, null));
                 }
                 catch (Exception e)
                 {                    
@@ -113,6 +125,22 @@ namespace SoapAPIConnector
             */
             string[] s = { "DP_IZVPOL", "ON_SCHFDOPPOK", "DP_UVUTOCH", "ON_KORSCHFDOPPOK" };
             return s.Contains(getFileType(file.fileName));
-        }     
+        }
+
+        private bool needBody(Document setting)
+        {
+            if (setting.LocalPath != null && setting.LocalPath.Count > 0)
+                return true;
+            if (Program.conf.EDOTickets.DefaultPath != null)
+                return true;
+            return false;
+        }
+
+        private ExDFSFile getBody(ExDFSFile file)
+        {           
+            if (needBody(file.settings))
+                return Controller.setBodyFromApi(file);
+            return file;
+        }
     }
 }

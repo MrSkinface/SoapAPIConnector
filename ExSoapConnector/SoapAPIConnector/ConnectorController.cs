@@ -275,6 +275,17 @@ namespace APICon.controller
             Logger.log(fileName + " sent");
         }
 
+        public static ExDFSFile setBodyFromApi(ExDFSFile file)
+        {
+            string uuid = getUUID(file.fileName);
+            GetContentResponse content = RestHelper.GetContentResponse(uuid);
+            byte[] body = Convert.FromBase64String(content.body);
+            byte[] sign = Utils.StringToBytes(content.sign, "windows-1251");
+            file.body = body;
+            file.sign = sign;
+            return file;
+        }
+
         public static void sendDoc(string fileName, string base64data)
         {
             sendDoc(fileName, Convert.FromBase64String(base64data));
