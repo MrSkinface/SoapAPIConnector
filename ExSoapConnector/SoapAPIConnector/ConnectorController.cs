@@ -19,9 +19,9 @@ namespace APICon.controller
     {          
         public static void init()
         {
-            RestHelper.authorize(Program.conf.Login, Program.conf.Api_pass);
-            Soap.Authorize(Program.conf.Login, Program.conf.Soap_pass);
             Logger.loadConfig();
+            RestHelper.authorize(Program.conf.Login, Program.conf.Api_pass);
+            Soap.Authorize(Program.conf.Login, Program.conf.Soap_pass);            
         }
 
         public static void ShowUsage()
@@ -172,6 +172,17 @@ namespace APICon.controller
             }
             return list;
         }
+
+        public static List<string> getList(List<string> filters, string[] endings)
+        {
+            List<string> list = new List<string>();
+            foreach (string ending in endings)
+            {
+                list.AddRange(getList(filters, ending));
+            }
+            return list;
+        }
+
         public static List<string> getList(List<string> filters, string ending)
         {
             List<string> list = new List<string>();
@@ -283,6 +294,12 @@ namespace APICon.controller
             byte[] sign = Utils.StringToBytes(content.sign, "windows-1251");
             file.body = body;
             file.sign = sign;
+            return file;
+        }
+
+        public static ExDFSFile setZipBody(ExDFSFile file)
+        {
+            file.zipBody = getDoc(file.fileName);
             return file;
         }
 

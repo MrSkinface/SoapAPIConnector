@@ -27,6 +27,9 @@ namespace SoapAPIConnector
             {
                 try
                 {
+                    /*Console.WriteLine("fileName: " + fileName);                    
+                    Console.WriteLine("isDownload(fileName): " + isDownload(fileName));*/
+
                     if (isDownload(fileName))
                     {
                         byte[] body = Controller.getDoc(fileName);

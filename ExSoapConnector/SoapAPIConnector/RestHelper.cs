@@ -23,14 +23,14 @@ namespace APICon.rest
                 authToken = response.varToken;
             }
             catch (Exception ex)
-            {
+            {                
                 Logger.log(ex.Message);                
             }
         }
         public static void send(string body, string sign, string doc_type)
         {
             Request req = null;
-            if (doc_type.StartsWith("ON_SCHF") || doc_type.StartsWith("ON_KORSCHF"))
+            if (doc_type.StartsWith("ON_SCHFDOPPR") || doc_type.StartsWith("ON_KORSCHFDOPPR"))
                 req = new DocumentUPDSendRequest(authToken, body, sign, doc_type);
             else
                 req = new DocumentSendRequest(authToken, body, sign, doc_type);

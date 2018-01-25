@@ -26,13 +26,12 @@ namespace SoapAPIConnector
             {
                 List<ExDFSFile> files = getFiles();
                 foreach (ExDFSFile f in files)
-                {
-                    /*Logger.log("processing [" + f.fileName + "]");*/
-
+                {                    
+                    ExDFSFile file = f;
                     try
                     {
-                        ExDFSFile file = f.settings.TicketsGenerate ? getTicket(f) : f;
                         file = getBody(file);
+                        file = f.settings.TicketsGenerate ? getTicket(f) : f;                        
                         if (file.ticket != null)
                             Controller.sendTicket(file);                        
                         Controller.archiveDFSFile(file);
@@ -43,10 +42,7 @@ namespace SoapAPIConnector
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine(e.StackTrace);           
-                        Logger.log("while processing [" + f.fileName + "] " + e.Message);
-                        if(e.Message.Contains("Document already queued"))
-                            Controller.archiveDFSFile(f);
+                        handleTicketsException(e,file);
                     }
                 }
             }
@@ -55,6 +51,20 @@ namespace SoapAPIConnector
                 Logger.log(e.Message);
             }
             Logger.log("tickets processed");
+        }
+
+        private void handleTicketsException(Exception e, ExDFSFile file)
+        {
+            Console.WriteLine(e.StackTrace);
+            Logger.log("while processing [" + file.fileName + "] " + e.Message);
+            if (e.Message.Contains("Document already queued"))
+                Controller.archiveDFSFile(file);
+            if (e.Message.Contains("tickets only for"))
+            {
+                file.ticket = null;
+                Controller.archiveDFSFile(file);
+                DFSHelper.saveDFSFile(file);
+            }
         }
 
         private bool isEnabled()
@@ -66,8 +76,8 @@ namespace SoapAPIConnector
 
         private List<ExDFSFile> getFiles()
         {
-            List<ExDFSFile> files = new List<ExDFSFile>();            
-            foreach (string fileName in Controller.getList(getDocTypes(), ".xml"))
+            List<ExDFSFile> files = new List<ExDFSFile>();
+            foreach (string fileName in Controller.getList(getDocTypes(), new string[] { ".xml", ".zip" }))
             {
                 try
                 {
@@ -110,8 +120,24 @@ namespace SoapAPIConnector
 
         private ExDFSFile getTicket(ExDFSFile file)
         {
+            if (isNotSupportedTicket(file))
+                throw new Exception("Auto-generated tickets only for [СЧФДОП] are allowed .");
             file.ticket = Controller.getTicket(file);
             return file;
+        }
+
+        private bool isNotSupportedTicket(ExDFSFile file)
+        {
+            if (file.fileName.StartsWith("ON_SCHFDOPPR") || file.fileName.StartsWith("ON_KORSCHFDOPPR"))
+            {
+                if (!Utils.GetTextFromXml(Utils.BytesToString(file.body, "windows-1251"), "Файл/Документ/@Функция").Equals("СЧФДОП")
+                    &&
+                    !Utils.GetTextFromXml(Utils.BytesToString(file.body, "windows-1251"), "Файл/Документ/@Функция").Equals("КСЧФДИС"))
+                {
+                    return true;
+                }                
+            }
+            return false;
         }
 
         private bool needContainer(ExDFSFile file)
@@ -137,10 +163,17 @@ namespace SoapAPIConnector
         }
 
         private ExDFSFile getBody(ExDFSFile file)
-        {           
-            if (needBody(file.settings))
-                return Controller.setBodyFromApi(file);
-            return file;
+        {
+            ExDFSFile f = file;
+            if (needBody(f.settings))
+            {
+                f = Controller.setBodyFromApi(f);
+                if (f.fileName.EndsWith(".zip"))
+                {
+                    f = Controller.setZipBody(f);
+                }
+            }
+            return f;
         }
     }
 }

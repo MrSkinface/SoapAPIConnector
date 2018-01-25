@@ -124,3 +124,14 @@ FIXES
 FEATURES
  
 *
+
+2.0.1alpha (2018-01-25)
+
+FIXES
+ 
+* creating log folder if not exist (removing wxception while init)
+
+FEATURES
+ 
+* added UPD tickets support (for schfdop type)
+* added zip saving (while upd tickets processing)

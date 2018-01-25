@@ -15,6 +15,7 @@ namespace APICon.Util
         public string fileName;
         public byte[] body;
         public byte[] sign;
+        public byte[] zipBody;
 
         /**/
         public Ticket ticket;

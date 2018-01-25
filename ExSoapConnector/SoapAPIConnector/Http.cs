@@ -11,7 +11,7 @@ namespace APICon.rest
 {
     public static class Http
     {
-        private static string url = "https://e-vo.ru/Api/Dixy/";
+        private static string url = "https://api-service.e-vo.ru/Api/Dixy/";
 
         public static object post<Type>(string url, object data)
         {

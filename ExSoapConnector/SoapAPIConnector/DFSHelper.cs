@@ -56,6 +56,17 @@ namespace APICon.Util
                 StringBuilder sb = new StringBuilder(Program.conf.Inbound.DefaultPath);                
                 if (docSettings != null)
                 {
+                    if (docSettings.LocalPath == null || docSettings.LocalPath.Count == 0)
+                    {
+                        if (Program.conf.Inbound.SubFolders)
+                            sb.Append(docType).Append("\\");
+                        if (!Directory.Exists(sb.ToString()))
+                            Directory.CreateDirectory(sb.ToString());
+                        File.WriteAllBytes(sb.ToString() + fileName, body);
+                        Logger.log(fileName + " saved in " + sb.ToString());
+                        return true;
+                    }
+
                     foreach (string path in docSettings.LocalPath)
                     {
                         if (!Directory.Exists(path))
@@ -116,15 +127,29 @@ namespace APICon.Util
         {            
             if (file.settings.LocalPath.Count > 0)
             {
-                saveTicket(file.settings.LocalPath, file.fileName, file.body);
-                saveTicket(file.settings.LocalPath, file.fileName.Replace(".xml",".bin"), file.sign);
+                if (file.zipBody != null)
+                {
+                    saveTicket(file.settings.LocalPath, file.fileName, file.zipBody);
+                }
+                else
+                {
+                    saveTicket(file.settings.LocalPath, file.fileName, file.body);
+                    saveTicket(file.settings.LocalPath, file.fileName.Replace(".xml", ".bin"), file.sign);
+                }
             }
             else
             {
                 if (Program.conf.EDOTickets.DefaultPath != null)
                 {
-                    saveTicket(Program.conf.EDOTickets.DefaultPath, file.fileName, file.body);
-                    saveTicket(Program.conf.EDOTickets.DefaultPath, file.fileName.Replace(".xml", ".bin"), file.sign);
+                    if (file.zipBody != null)
+                    {
+                        saveTicket(Program.conf.EDOTickets.DefaultPath, file.fileName, file.zipBody);
+                    }
+                    else
+                    {
+                        saveTicket(Program.conf.EDOTickets.DefaultPath, file.fileName, file.body);
+                        saveTicket(Program.conf.EDOTickets.DefaultPath, file.fileName.Replace(".xml", ".bin"), file.sign);
+                    }
                 }
             }
             if (file.ticket != null)
@@ -372,6 +397,15 @@ namespace APICon.Util
             {
                 Console.WriteLine(e.StackTrace);
                 Logger.log(e.Message);                
+            }
+        }
+
+        public static void checkIfExist(string path)
+        {
+            if (!Directory.Exists(path))
+            {
+                Logger.log("[WARNING] Path [" + path + "] don't exist. Will be created .");
+                Directory.CreateDirectory(path);
             }
         }
     }

@@ -89,6 +89,7 @@ namespace SoapAPIConnector
             List<ExDFSFile> files = new List<ExDFSFile>();
             if (Program.conf.Outbound.DefaultPath != null)
             {
+                DFSHelper.checkIfExist(Program.conf.Outbound.DefaultPath);
                 foreach (string path in Directory.GetFiles(Program.conf.Outbound.DefaultPath))
                 {
                     string name = Path.GetFileName(path);
@@ -103,6 +104,7 @@ namespace SoapAPIConnector
             {
                 foreach (string path in setting.LocalPath)
                 {
+                    DFSHelper.checkIfExist(path);
                     string name = Path.GetFileName(path);
                     byte[] body = File.ReadAllBytes(path);
 
