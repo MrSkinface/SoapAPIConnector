@@ -23,7 +23,7 @@ namespace SoapAPIConnector
         private void run()
         {
             Logger.log("start processing outbound ...");
-            List<ExDFSFile> files = getFiles();
+            HashSet<ExDFSFile> files = getFiles();
             try
             {
                 foreach (ExDFSFile f in files)
@@ -84,32 +84,44 @@ namespace SoapAPIConnector
             return Program.conf.Outbound.IsArchive;
         }
 
-        private List<ExDFSFile> getFiles()
+        private HashSet<ExDFSFile> getFiles()
         {
-            List<ExDFSFile> files = new List<ExDFSFile>();
+            HashSet<string> paths = new HashSet<string>();
+            HashSet<ExDFSFile> files = new HashSet<ExDFSFile>();
+            /*
+            * getting default path files
+            */
             if (Program.conf.Outbound.DefaultPath != null)
             {
                 DFSHelper.checkIfExist(Program.conf.Outbound.DefaultPath);
                 foreach (string path in Directory.GetFiles(Program.conf.Outbound.DefaultPath))
                 {
-                    string name = Path.GetFileName(path);
-                    byte[] body = File.ReadAllBytes(path);
-
-                    Document settings = getDocSettings(name, path);
-
-                    files.Add(new ExDFSFile(path, settings, name, body, null));
+                    paths.Add(path);                    
                 }
             }
+            /*
+            * getting custom path files
+            */
             foreach (Document setting in Program.conf.Outbound.Document)
             {
                 foreach (string path in setting.LocalPath)
                 {
                     DFSHelper.checkIfExist(path);
-                    string name = Path.GetFileName(path);
-                    byte[] body = File.ReadAllBytes(path);
-
-                    files.Add(new ExDFSFile(path, setting, name, body, null));
+                    foreach (string docPath in Directory.GetFiles(path))
+                    {
+                        paths.Add(docPath);                       
+                    }
                 }
+            }
+            /*
+            * getting ExDFSFiles from unique paths
+            */
+            foreach (string path in paths)
+            {
+                string name = Path.GetFileName(path);
+                byte[] body = File.ReadAllBytes(path);
+                Document settings = getDocSettings(name, path);
+                files.Add(new ExDFSFile(path, settings, name, body, null));
             }
             return files;
         }
