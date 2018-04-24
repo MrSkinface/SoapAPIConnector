@@ -321,7 +321,13 @@ namespace APICon.Util
                 case "ON_KORSCHFDOPPR":
                     path = "Файл/@ИдФайл";
                     if (status.Status != "2")
+                    {
                         status.Status = "0";
+                    }
+                    status.TotalLines = CountNodesFromXml(base64body, "Файл/Документ/ТаблСчФакт/СведТов");
+                    status.TotalNetAmount = GetTextFromXml(base64body, "Файл/Документ/ТаблСчФакт/ВсегоОпл/@СтТовБезНДСВсего");
+                    status.TotalTaxAmount = GetTextFromXml(base64body, "Файл/Документ/ТаблСчФакт/ВсегоОпл/СумНалВсего/СумНал");
+                    status.TotalGrossAmount = GetTextFromXml(base64body, "Файл/Документ/ТаблСчФакт/ВсегоОпл/@СтТовУчНалВсего");
                     break;
                 case "DP_PDPOL":
                     path = "Файл/Документ/СведПодтв/СведОтпрФайл/@ИмяПостФайла";
@@ -367,8 +373,24 @@ namespace APICon.Util
             try
             {
                 XmlDocument xml = new XmlDocument();
-                xml.LoadXml(Utils.Base64Decode(base64content, "windows-1251"));
+                xml.LoadXml(Utils.Base64Decode(base64content, "windows-1251"));                
                 return xml.SelectSingleNode(xPathPattern).InnerText;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.StackTrace);
+                Logger.log("error while getting value [" + xPathPattern + "] . " + e.Message);
+                return null;
+            }
+        }
+
+        private static string CountNodesFromXml(string base64content, string xPathPattern)
+        {
+            try
+            {
+                XmlDocument xml = new XmlDocument();
+                xml.LoadXml(Utils.Base64Decode(base64content, "windows-1251"));
+                return Convert.ToString(xml.SelectNodes(xPathPattern).Count);                
             }
             catch (Exception e)
             {

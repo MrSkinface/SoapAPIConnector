@@ -52,5 +52,17 @@ namespace APICon.Status
         [XmlElement(ElementName = "StatusOnFileName")]
         public string StatusOnFileName { get; set; }
 
+        /*
+        * custom fields
+        */
+        [XmlElement(ElementName = "TotalLines")]
+        public string TotalLines { get; set; }
+        [XmlElement(ElementName = "TotalNetAmount")]
+        public string TotalNetAmount { get; set; }
+        [XmlElement(ElementName = "TotalTaxAmount")]
+        public string TotalTaxAmount { get; set; }
+        [XmlElement(ElementName = "TotalGrossAmount")]
+        public string TotalGrossAmount { get; set; }
+
     }
 }

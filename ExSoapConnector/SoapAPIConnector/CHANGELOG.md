@@ -135,3 +135,13 @@ FEATURES
  
 * added UPD tickets support (for schfdop type)
 * added zip saving (while upd tickets processing)
+
+2.0.2 (2018-04-24)
+
+FIXES
+ 
+* 
+
+FEATURES
+ 
+* added 'Total*' fields to custom StatusXml (for outgoing upd)
