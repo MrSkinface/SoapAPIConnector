@@ -74,7 +74,8 @@ namespace APICon.soap
                 binding.Security.Mode = BasicHttpSecurityMode.Transport;
                 binding.Security.Transport.ClientCredentialType = HttpClientCredentialType.None;
                 binding.MaxReceivedMessageSize = Int32.MaxValue;
-                EndpointAddress endpoint = new EndpointAddress("https://ru-soap.edi.su/soap/?wsdl");
+                /*EndpointAddress endpoint = new EndpointAddress("https://ru-soap.edi.su/soap/?wsdl");*/
+                EndpointAddress endpoint = new EndpointAddress("https://soap.e-vo.ru/soap/?wsdl");
                 EdiServerClient client = new EdiServerClient(binding, endpoint);
                 return client;
             }

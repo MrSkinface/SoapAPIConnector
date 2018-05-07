@@ -145,3 +145,13 @@ FIXES
 FEATURES
  
 * added 'Total*' fields to custom StatusXml (for outgoing upd)
+
+2.0.3 (2018-05-07)
+
+FIXES
+ 
+* 
+
+FEATURES
+ 
+* changed soap hostname to soap.e-vo.ru
