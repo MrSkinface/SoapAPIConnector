@@ -25,15 +25,19 @@ namespace SoapAPIConnector
             try
             {
                 List<string> inbound = Controller.getList();
-                List<string> filesToProcess = getFilesToBeProcessed(inbound);
-                Dictionary<string, byte[]> files = Controller.getDocuments(filesToProcess);
-                foreach (string fileName in files.Keys)
+                List<string> filesToProcess = getFilesToBeProcessed(inbound);                
+                Logger.log(filesToProcess.Count + " files found");
+                if (filesToProcess.Count > 0)
                 {
-                    DFSHelper.saveDoc(fileName, files[fileName]);
-                }
-                if (isArchive())
-                {
-                    Controller.archiveDocuments(files.Keys.ToList());
+                    Dictionary<string, byte[]> files = Controller.getDocuments(filesToProcess);
+                    foreach (string fileName in files.Keys)
+                    {
+                        DFSHelper.saveDoc(fileName, files[fileName]);
+                    }
+                    if (isArchive())
+                    {
+                        Controller.archiveDocuments(files.Keys.ToList());
+                    }
                 }                
             }
             catch (Exception e)
