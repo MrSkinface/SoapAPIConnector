@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<SavedWcfConfigurationInformation xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Version="9.1" CheckSum="B6LVebiTdBUpAx54qPtaL2JdxuE=">
+<SavedWcfConfigurationInformation xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Version="9.1" CheckSum="j0JLeNl7VPPhqAeFrxyMzczfnNU=">
   <bindingConfigurations>
-    <bindingConfiguration bindingType="basicHttpBinding" name="EdiServerImplPortBinding">
+    <bindingConfiguration bindingType="basicHttpBinding" name="ExiteWsSoap11">
       <properties>
         <property path="/name" isComplexType="false" isExplicitlyDefined="true" clrType="System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
-          <serializedValue>EdiServerImplPortBinding</serializedValue>
+          <serializedValue>ExiteWsSoap11</serializedValue>
         </property>
         <property path="/closeTimeout" isComplexType="false" isExplicitlyDefined="true" clrType="System.TimeSpan, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
           <serializedValue />
@@ -66,8 +66,8 @@
         <property path="/useDefaultWebProxy" isComplexType="false" isExplicitlyDefined="true" clrType="System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
           <serializedValue />
         </property>
-        <property path="/messageEncoding" isComplexType="false" isExplicitlyDefined="true" clrType="System.ServiceModel.WSMessageEncoding, System.ServiceModel, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
-          <serializedValue>Mtom</serializedValue>
+        <property path="/messageEncoding" isComplexType="false" isExplicitlyDefined="false" clrType="System.ServiceModel.WSMessageEncoding, System.ServiceModel, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
+          <serializedValue>Text</serializedValue>
         </property>
         <property path="/security" isComplexType="true" isExplicitlyDefined="false" clrType="System.ServiceModel.Configuration.BasicHttpSecurityElement, System.ServiceModel, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
           <serializedValue>System.ServiceModel.Configuration.BasicHttpSecurityElement</serializedValue>
@@ -110,10 +110,10 @@
         </property>
       </properties>
     </bindingConfiguration>
-    <bindingConfiguration bindingType="basicHttpBinding" name="EdiServerImplPortBinding1">
+    <bindingConfiguration bindingType="basicHttpBinding" name="ExiteWsSoap111">
       <properties>
         <property path="/name" isComplexType="false" isExplicitlyDefined="true" clrType="System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
-          <serializedValue>EdiServerImplPortBinding1</serializedValue>
+          <serializedValue>ExiteWsSoap111</serializedValue>
         </property>
         <property path="/closeTimeout" isComplexType="false" isExplicitlyDefined="true" clrType="System.TimeSpan, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
           <serializedValue />
@@ -175,8 +175,8 @@
         <property path="/useDefaultWebProxy" isComplexType="false" isExplicitlyDefined="true" clrType="System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
           <serializedValue />
         </property>
-        <property path="/messageEncoding" isComplexType="false" isExplicitlyDefined="true" clrType="System.ServiceModel.WSMessageEncoding, System.ServiceModel, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
-          <serializedValue>Mtom</serializedValue>
+        <property path="/messageEncoding" isComplexType="false" isExplicitlyDefined="false" clrType="System.ServiceModel.WSMessageEncoding, System.ServiceModel, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
+          <serializedValue>Text</serializedValue>
         </property>
         <property path="/security" isComplexType="true" isExplicitlyDefined="false" clrType="System.ServiceModel.Configuration.BasicHttpSecurityElement, System.ServiceModel, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
           <serializedValue>System.ServiceModel.Configuration.BasicHttpSecurityElement</serializedValue>
@@ -221,10 +221,10 @@
     </bindingConfiguration>
   </bindingConfigurations>
   <endpoints>
-    <endpoint name="EdiServerImplPort" contract="ExiteSoapService.EdiServer" bindingType="basicHttpBinding" address="https://ru-soap.edi.su/soap" bindingConfiguration="EdiServerImplPortBinding">
+    <endpoint name="ExiteWsSoap11" contract="ServiceReference.ExiteWs" bindingType="basicHttpBinding" address="https://soap-api.e-vo.ru/soap" bindingConfiguration="ExiteWsSoap11">
       <properties>
         <property path="/address" isComplexType="false" isExplicitlyDefined="true" clrType="System.Uri, System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
-          <serializedValue>https://ru-soap.edi.su/soap</serializedValue>
+          <serializedValue>https://soap-api.e-vo.ru:443/soap</serializedValue>
         </property>
         <property path="/behaviorConfiguration" isComplexType="false" isExplicitlyDefined="false" clrType="System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
           <serializedValue />
@@ -233,10 +233,10 @@
           <serializedValue>basicHttpBinding</serializedValue>
         </property>
         <property path="/bindingConfiguration" isComplexType="false" isExplicitlyDefined="true" clrType="System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
-          <serializedValue>EdiServerImplPortBinding</serializedValue>
+          <serializedValue>ExiteWsSoap11</serializedValue>
         </property>
         <property path="/contract" isComplexType="false" isExplicitlyDefined="true" clrType="System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
-          <serializedValue>ExiteSoapService.EdiServer</serializedValue>
+          <serializedValue>ServiceReference.ExiteWs</serializedValue>
         </property>
         <property path="/headers" isComplexType="true" isExplicitlyDefined="false" clrType="System.ServiceModel.Configuration.AddressHeaderCollectionElement, System.ServiceModel, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
           <serializedValue>System.ServiceModel.Configuration.AddressHeaderCollectionElement</serializedValue>
@@ -296,7 +296,7 @@
           <serializedValue>False</serializedValue>
         </property>
         <property path="/name" isComplexType="false" isExplicitlyDefined="true" clrType="System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
-          <serializedValue>EdiServerImplPort</serializedValue>
+          <serializedValue>ExiteWsSoap11</serializedValue>
         </property>
         <property path="/kind" isComplexType="false" isExplicitlyDefined="false" clrType="System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
           <serializedValue />

@@ -22,28 +22,38 @@ namespace SoapAPIConnector
         private void run()
         {            
             Logger.log("start processing inbound ...");
-            List<string> inbound = Controller.getList();
-            foreach (string fileName in inbound)
+            try
             {
-                try
+                List<string> inbound = Controller.getList();
+                List<string> filesToProcess = getFilesToBeProcessed(inbound);
+                Dictionary<string, byte[]> files = Controller.getDocuments(filesToProcess);
+                foreach (string fileName in files.Keys)
                 {
-                    /*Console.WriteLine("fileName: " + fileName);                    
-                    Console.WriteLine("isDownload(fileName): " + isDownload(fileName));*/
-
-                    if (isDownload(fileName))
-                    {
-                        byte[] body = Controller.getDoc(fileName);
-                        DFSHelper.saveDoc(fileName, body);
-                        if (isArchive())
-                            Controller.archiveDoc(fileName);                     
-                    }
+                    DFSHelper.saveDoc(fileName, files[fileName]);
                 }
-                catch (Exception e)
+                if (isArchive())
                 {
-                    Logger.log(e.Message);
+                    Controller.archiveDocuments(files.Keys.ToList());
+                }                
+            }
+            catch (Exception e)
+            {
+                Logger.log(e.Message);
+            }
+            Logger.log("inbound processed");            
+        }
+
+        private List<string> getFilesToBeProcessed(List<string> allInbound)
+        {
+            List<string> toProcess = new List<string>();
+            foreach (string fileName in allInbound)
+            {
+                if (isDownload(fileName))
+                {
+                    toProcess.Add(fileName);
                 }
             }
-            Logger.log("inbound processed");
+            return toProcess;
         }
 
         private bool isEnabled()

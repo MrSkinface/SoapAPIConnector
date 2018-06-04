@@ -155,3 +155,14 @@ FIXES
 FEATURES
  
 * changed soap hostname to soap.e-vo.ru
+
+
+2.1.0 (2018-06-04)
+
+FIXES
+ 
+* 
+
+FEATURES
+ 
+* add new soap service reference (https://soap-api.e-vo.ru/soap/exite.wsdl)

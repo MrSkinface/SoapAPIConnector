@@ -86,6 +86,33 @@ namespace APICon.controller
             Logger.log(name + " removed from server");
         }
 
+        public static void archiveDocuments(List<string> names)
+        {
+            archiveDocuments(names, 1000);
+        }
+
+        public static void archiveDocuments(List<string> names, int stepLimit)
+        {
+            for (int i = 0; i < ((names.Count / stepLimit) + 1); i++)
+            {
+                List<string> s = new List<string>();
+                for (int j = (stepLimit * i); j < ((i + 1) * stepLimit); j++)
+                {
+                    if (j == names.Count)
+                    {
+                        break;
+                    }
+                    s.Add(names.ElementAt(j));
+                }                
+                Soap.archiveDocuments(s.ToArray());
+                s.Clear();
+            }
+            foreach (string name in names)
+            {
+                Logger.log(name + " removed from server");
+            }
+        }
+
         public static void archiveDocByID(string id)
         {
             string fileName = getFileNameByDocGUID(id);
@@ -111,19 +138,52 @@ namespace APICon.controller
         {
             return Soap.getDoc(name);
         }
+
+        public static Dictionary<string, byte[]> getDocuments(List<string> names)
+        {
+            return getDocuments(names, 1000);
+        }
+
+        public static Dictionary<string, byte[]> getDocuments(List<string> names, int stepLimit)
+        {            
+            Dictionary<string, byte[]> result = new Dictionary<string, byte[]>();
+            for (int i = 0; i < ((names.Count / stepLimit) + 1); i++)
+            {
+                List<string> s = new List<string>();
+                for (int j = (stepLimit * i); j < ((i+1) * stepLimit) ; j++)
+                {                                        
+                    if (j == names.Count)
+                    {
+                        break;
+                    }
+                    s.Add(names.ElementAt(j));
+                }
+                Dictionary<string, byte[]> tmp = ZipHelper.unzip(Soap.getDocuments(s.ToArray()));
+                foreach(string k in tmp.Keys)
+                {
+                    result.Add(k, tmp[k]);
+                }                
+                s.Clear();
+            }
+            return result;
+        }
+
         public static byte[] getBinForDoc(string fileName)
         {
             return getDoc(fileName.Replace(".xml", ".bin"));
         }
+
         public static void archiveBinForDoc(string fileName)
         {
             archiveDoc(fileName.Replace(".xml", ".bin"));
         }
+
         public static void archiveDocAndSign(string fileName)
         {
             archiveDoc(fileName);
             archiveBinForDoc(fileName);
         }
+
         public static void archiveDFSFile(ExDFSFile file)
         {
             archiveDocAndSign(file.fileName);

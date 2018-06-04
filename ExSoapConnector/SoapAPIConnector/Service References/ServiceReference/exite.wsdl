@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wsdl:definitions xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:sch="http://soap.edi.exite.org" xmlns:tns="http://soap.edi.exite.org" targetNamespace="http://soap.edi.exite.org" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
+  <wsdl:types>
+    <xs:schema targetNamespace="http://soap.edi.exite.org" version="1.0" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+      <xs:element name="archiveDocRequest">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element minOccurs="0" name="user" type="tns:ediLogin" />
+            <xs:element minOccurs="0" name="fileName" type="xs:string" />
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="archiveDocResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element minOccurs="0" name="result" type="tns:ediResponse" />
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="getDocRequest">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element minOccurs="0" name="user" type="tns:ediLogin" />
+            <xs:element minOccurs="0" name="fileName" type="xs:string" />
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="getDocResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element minOccurs="0" name="result" type="tns:ediFile" />
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="getListRequest">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element minOccurs="0" name="user" type="tns:ediLogin" />
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="getListResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element minOccurs="0" name="result" type="tns:ediFileList" />
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="sendDocRequest">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element minOccurs="0" name="user" type="tns:ediLogin" />
+            <xs:element minOccurs="0" name="fileName" type="xs:string" />
+            <xs:element minOccurs="0" name="content" nillable="true" type="xs:base64Binary" />
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="sendDocResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element minOccurs="0" name="result" type="tns:ediResponse" />
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="uploadDocRequest">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element minOccurs="0" name="user" type="tns:ediLogin" />
+            <xs:element minOccurs="0" name="fileName" type="xs:string" />
+            <xs:element minOccurs="0" name="content" nillable="true" type="xs:base64Binary" />
+            <xs:element minOccurs="0" name="remoteFolder" type="xs:string" />
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="uploadDocResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element minOccurs="0" name="result" type="tns:ediResponse" />
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="archiveDocumentsRequest">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element minOccurs="0" name="user" type="tns:ediLogin" />
+            <xs:element minOccurs="0" maxOccurs="unbounded" name="fileName" nillable="true" type="xs:string" />
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="archiveDocumentsResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element minOccurs="0" name="result" type="tns:ediResponse" />
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="getDocumentsRequest">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element minOccurs="0" name="user" type="tns:ediLogin" />
+            <xs:element minOccurs="0" maxOccurs="unbounded" name="fileName" nillable="true" type="xs:string" />
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="getDocumentsResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element minOccurs="0" name="result" type="tns:ediFile" />
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:complexType name="ediLogin">
+        <xs:sequence>
+          <xs:element minOccurs="0" name="login" type="xs:string" />
+          <xs:element minOccurs="0" name="pass" type="xs:string" />
+        </xs:sequence>
+      </xs:complexType>
+      <xs:complexType name="ediResponse">
+        <xs:sequence>
+          <xs:element name="errorCode" type="xs:int" />
+          <xs:element minOccurs="0" name="errorMessage" type="xs:string" />
+        </xs:sequence>
+      </xs:complexType>
+      <xs:complexType name="ediFile">
+        <xs:complexContent mixed="false">
+          <xs:extension base="tns:ediResponse">
+            <xs:sequence>
+              <xs:element minOccurs="0" name="content" type="xs:base64Binary" />
+            </xs:sequence>
+          </xs:extension>
+        </xs:complexContent>
+      </xs:complexType>
+      <xs:complexType name="ediFileList">
+        <xs:complexContent mixed="false">
+          <xs:extension base="tns:ediResponse">
+            <xs:sequence>
+              <xs:element minOccurs="0" maxOccurs="unbounded" name="list" nillable="true" type="xs:string" />
+            </xs:sequence>
+          </xs:extension>
+        </xs:complexContent>
+      </xs:complexType>
+    </xs:schema>
+  </wsdl:types>
+  <wsdl:message name="getDocumentsResponse">
+    <wsdl:part name="getDocumentsResponse" element="tns:getDocumentsResponse" />
+  </wsdl:message>
+  <wsdl:message name="uploadDocRequest">
+    <wsdl:part name="uploadDocRequest" element="tns:uploadDocRequest" />
+  </wsdl:message>
+  <wsdl:message name="uploadDocResponse">
+    <wsdl:part name="uploadDocResponse" element="tns:uploadDocResponse" />
+  </wsdl:message>
+  <wsdl:message name="archiveDocumentsResponse">
+    <wsdl:part name="archiveDocumentsResponse" element="tns:archiveDocumentsResponse" />
+  </wsdl:message>
+  <wsdl:message name="getListRequest">
+    <wsdl:part name="getListRequest" element="tns:getListRequest" />
+  </wsdl:message>
+  <wsdl:message name="getDocResponse">
+    <wsdl:part name="getDocResponse" element="tns:getDocResponse" />
+  </wsdl:message>
+  <wsdl:message name="archiveDocRequest">
+    <wsdl:part name="archiveDocRequest" element="tns:archiveDocRequest" />
+  </wsdl:message>
+  <wsdl:message name="sendDocResponse">
+    <wsdl:part name="sendDocResponse" element="tns:sendDocResponse" />
+  </wsdl:message>
+  <wsdl:message name="archiveDocumentsRequest">
+    <wsdl:part name="archiveDocumentsRequest" element="tns:archiveDocumentsRequest" />
+  </wsdl:message>
+  <wsdl:message name="sendDocRequest">
+    <wsdl:part name="sendDocRequest" element="tns:sendDocRequest" />
+  </wsdl:message>
+  <wsdl:message name="getDocumentsRequest">
+    <wsdl:part name="getDocumentsRequest" element="tns:getDocumentsRequest" />
+  </wsdl:message>
+  <wsdl:message name="getListResponse">
+    <wsdl:part name="getListResponse" element="tns:getListResponse" />
+  </wsdl:message>
+  <wsdl:message name="getDocRequest">
+    <wsdl:part name="getDocRequest" element="tns:getDocRequest" />
+  </wsdl:message>
+  <wsdl:message name="archiveDocResponse">
+    <wsdl:part name="archiveDocResponse" element="tns:archiveDocResponse" />
+  </wsdl:message>
+  <wsdl:portType name="ExiteWs">
+    <wsdl:operation name="getDocuments">
+      <wsdl:input name="getDocumentsRequest" message="tns:getDocumentsRequest" />
+      <wsdl:output name="getDocumentsResponse" message="tns:getDocumentsResponse" />
+    </wsdl:operation>
+    <wsdl:operation name="uploadDoc">
+      <wsdl:input name="uploadDocRequest" message="tns:uploadDocRequest" />
+      <wsdl:output name="uploadDocResponse" message="tns:uploadDocResponse" />
+    </wsdl:operation>
+    <wsdl:operation name="archiveDocuments">
+      <wsdl:input name="archiveDocumentsRequest" message="tns:archiveDocumentsRequest" />
+      <wsdl:output name="archiveDocumentsResponse" message="tns:archiveDocumentsResponse" />
+    </wsdl:operation>
+    <wsdl:operation name="getList">
+      <wsdl:input name="getListRequest" message="tns:getListRequest" />
+      <wsdl:output name="getListResponse" message="tns:getListResponse" />
+    </wsdl:operation>
+    <wsdl:operation name="getDoc">
+      <wsdl:input name="getDocRequest" message="tns:getDocRequest" />
+      <wsdl:output name="getDocResponse" message="tns:getDocResponse" />
+    </wsdl:operation>
+    <wsdl:operation name="archiveDoc">
+      <wsdl:input name="archiveDocRequest" message="tns:archiveDocRequest" />
+      <wsdl:output name="archiveDocResponse" message="tns:archiveDocResponse" />
+    </wsdl:operation>
+    <wsdl:operation name="sendDoc">
+      <wsdl:input name="sendDocRequest" message="tns:sendDocRequest" />
+      <wsdl:output name="sendDocResponse" message="tns:sendDocResponse" />
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:binding name="ExiteWsSoap11" type="tns:ExiteWs">
+    <soap:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="getDocuments">
+      <soap:operation soapAction="" />
+      <wsdl:input name="getDocumentsRequest">
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output name="getDocumentsResponse">
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="uploadDoc">
+      <soap:operation soapAction="" />
+      <wsdl:input name="uploadDocRequest">
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output name="uploadDocResponse">
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="archiveDocuments">
+      <soap:operation soapAction="" />
+      <wsdl:input name="archiveDocumentsRequest">
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output name="archiveDocumentsResponse">
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getList">
+      <soap:operation soapAction="" />
+      <wsdl:input name="getListRequest">
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output name="getListResponse">
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getDoc">
+      <soap:operation soapAction="" />
+      <wsdl:input name="getDocRequest">
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output name="getDocResponse">
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="archiveDoc">
+      <soap:operation soapAction="" />
+      <wsdl:input name="archiveDocRequest">
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output name="archiveDocResponse">
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="sendDoc">
+      <soap:operation soapAction="" />
+      <wsdl:input name="sendDocRequest">
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output name="sendDocResponse">
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:service name="ExiteWsService">
+    <wsdl:port name="ExiteWsSoap11" binding="tns:ExiteWsSoap11">
+      <soap:address location="https://soap-api.e-vo.ru:443/soap" />
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>
