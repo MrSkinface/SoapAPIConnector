@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using APICon.Util;
+using System.Net;
 using APICon.logger;
 using SoapAPIConnector;
 
@@ -11,13 +12,13 @@ namespace APICon.rest
 {
     public static class Http
     {
-        private static string url = "https://api-service.e-vo.ru/Api/Dixy/";
+        private static string url = Program.conf.getTransportSchema() + "://" + Program.conf.getRestEndpoint() + "/Api/V1/Edo/";
 
         public static object post<Type>(string url, object data)
         {
-            var client = new RestClient(Http.url + url);            
+            var client = new RestClient(Http.url + url);
             var request = new RestRequest(Method.POST);
-            request.AddJsonBody(data);               
+            request.AddJsonBody(data);
             IRestResponse response = client.Execute(request);
             var content = response.Content;
             debug(data,response);           

@@ -108,16 +108,19 @@ namespace APICon.soap
             try
             {
                 BasicHttpBinding binding = new BasicHttpBinding();
-                binding.Security.Mode = BasicHttpSecurityMode.Transport;
-                binding.Security.Transport.ClientCredentialType = HttpClientCredentialType.None;
-                binding.MaxReceivedMessageSize = Int32.MaxValue;                
-                EndpointAddress endpoint = new EndpointAddress("https://soap-api.e-vo.ru/soap/exite.wsdl");                
+                if (Program.conf.IsSecure())
+                {
+                    binding.Security.Mode = BasicHttpSecurityMode.Transport;
+                    binding.Security.Transport.ClientCredentialType = HttpClientCredentialType.None;
+                }
+                binding.MaxReceivedMessageSize = Int32.MaxValue;
+                EndpointAddress endpoint = new EndpointAddress(Program.conf.getTransportSchema() + "://" + Program.conf.getSoapEndpoint() + "/soap/exite.wsdl");
                 ExiteWsClient client = new ExiteWsClient(binding, endpoint);
                 return client;
             }
             catch (Exception e)
             {                
-                Logger.log(e.StackTrace);
+                Console.WriteLine(e.StackTrace);                
                 throw e;
             }
         }

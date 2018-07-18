@@ -166,3 +166,13 @@ FIXES
 FEATURES
  
 * add new soap service reference (https://soap-api.e-vo.ru/soap/exite.wsdl)
+
+2.2.0 (2018-07-18)
+
+FIXES
+ 
+* 
+
+FEATURES
+ 
+* add http work with soap/rest over vpn (within internal network)

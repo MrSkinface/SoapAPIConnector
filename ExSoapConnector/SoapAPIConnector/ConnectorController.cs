@@ -88,7 +88,7 @@ namespace APICon.controller
 
         public static void archiveDocuments(List<string> names)
         {
-            archiveDocuments(names, 1000);
+            archiveDocuments(names, 2000);
         }
 
         public static void archiveDocuments(List<string> names, int stepLimit)
@@ -141,7 +141,7 @@ namespace APICon.controller
 
         public static Dictionary<string, byte[]> getDocuments(List<string> names)
         {
-            return getDocuments(names, 1000);
+            return getDocuments(names, 2000);
         }
 
         public static Dictionary<string, byte[]> getDocuments(List<string> names, int stepLimit)

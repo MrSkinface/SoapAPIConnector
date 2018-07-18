@@ -23,8 +23,9 @@ namespace APICon.rest
                 authToken = response.varToken;
             }
             catch (Exception ex)
-            {                
-                Logger.log(ex.Message);                
+            {
+                Console.WriteLine(ex.Message);
+                Console.WriteLine(ex.StackTrace);                             
             }
         }
         public static void send(string body, string sign, string doc_type)

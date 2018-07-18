@@ -80,6 +80,12 @@ namespace APICon.conf
     {
         [XmlAttribute(AttributeName = "debug")]
         public bool debug { get; set; }
+        [XmlElement(ElementName = "transport_schema")]
+        public string TransportSchema { get; set; }
+        [XmlElement(ElementName = "soap_endpoint")]
+        public string SoapEndpointUrl { get; set; }
+        [XmlElement(ElementName = "rest_endpoint")]
+        public string RestEndpointUrl { get; set; }
         [XmlElement(ElementName = "login")]
         public string Login { get; set; }
         [XmlElement(ElementName = "soap_pass")]
@@ -96,7 +102,26 @@ namespace APICon.conf
         public InboundOutbound Outbound { get; set; }
         [XmlElement(ElementName = "EDOTickets")]
         public InboundOutbound EDOTickets { get; set; }
-        
+
+        public string getTransportSchema()
+        {
+            return (TransportSchema != null && TransportSchema.Equals("http")) ? "http" : "https";
+        }
+
+        public string getSoapEndpoint()
+        {
+            return SoapEndpointUrl != null ? SoapEndpointUrl : "soap-api.e-vo.ru";
+        }
+
+        public string getRestEndpoint()
+        {
+            return RestEndpointUrl != null ? RestEndpointUrl : "api-service.e-vo.ru";
+        }
+
+        public bool IsSecure()
+        {
+            return getTransportSchema().Equals("https");
+        }
 
         public Document GetCustomInboundSettings(string docType)
         {
