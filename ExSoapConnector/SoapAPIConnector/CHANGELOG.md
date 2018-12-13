@@ -176,3 +176,13 @@ FIXES
 FEATURES
  
 * add http work with soap/rest over vpn (within internal network)
+
+2.2.1 (2018-12-13)
+
+FIXES
+ 
+* [invalid crc] error handling
+
+FEATURES
+ 
+* 

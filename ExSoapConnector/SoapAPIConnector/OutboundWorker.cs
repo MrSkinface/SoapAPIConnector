@@ -148,6 +148,10 @@ namespace SoapAPIConnector
             {
                 Logger.log("ERROR: " + e.Message + ", file [" + file.fileName + "] will be waiting for next sending");
             }
+            else if (e.Message.Contains("invalid entry CRC"))
+            {
+                Logger.log("ERROR: " + e.Message + ", file [" + file.fileName + "] will be waiting for next sending");
+            }
             else
             {
                 DFSHelper.saveStatus(file, e.Message);                
