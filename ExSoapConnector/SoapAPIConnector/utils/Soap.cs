@@ -103,6 +103,19 @@ namespace APICon.soap
                 throw new Exception(response.result.errorMessage);            
         }
 
+        public static void uploadDoc(string fileName, byte[] docBody, string remoteFolder)
+        {
+            ExiteWsClient client = configureClient();
+            uploadDocRequest req = new uploadDocRequest();
+            req.user = soapAuth;
+            req.fileName = fileName;
+            req.content = docBody;
+            req.remoteFolder = remoteFolder;
+            uploadDocResponse response = client.uploadDoc(req);
+            if (response.result == null || response.result.errorCode != 0)
+                throw new Exception(response.result.errorMessage);
+        }
+
         private static ExiteWsClient configureClient()
         {
             try

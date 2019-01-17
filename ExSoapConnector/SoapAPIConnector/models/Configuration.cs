@@ -34,6 +34,8 @@ namespace APICon.conf
         /**/
         [XmlElement(ElementName = "status")]
         public string status { get; set; }
+        [XmlElement(ElementName = "remoteFolder")]
+        public string remoteFolder { get; set; }
     }
     [XmlRoot]
     public class ChainContainer

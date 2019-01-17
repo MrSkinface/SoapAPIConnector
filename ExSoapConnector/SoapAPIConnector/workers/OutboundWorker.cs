@@ -52,7 +52,14 @@ namespace SoapAPIConnector
                             }
                             else
                             {
-                                Controller.sendDoc(file.fileName, file.body);
+                                if (isSpecFolder(file.settings))
+                                {
+                                    Controller.uploadDoc(file.fileName, file.body, file.settings.remoteFolder);
+                                }
+                                else
+                                {
+                                    Controller.sendDoc(file.fileName, file.body);
+                                }                                
                             }
                         }
                         if (isArchive())
@@ -61,13 +68,14 @@ namespace SoapAPIConnector
                     }
                     catch (Exception e)
                     {
+                        Logger.error(e);
                         handleSendException(e, file);                        
                     }
                 }
             }
             catch (Exception e)
             {
-                Logger.log(e.Message);
+                Logger.error(e);
             }
             Logger.log("outbound processed");
         }
@@ -81,7 +89,14 @@ namespace SoapAPIConnector
 
         private bool isArchive()
         {
-            return Program.conf.Outbound.IsArchive;
+            if (Program.conf.Outbound != null)
+                return Program.conf.Outbound.IsArchive;
+            return false;
+        }
+
+        private bool isSpecFolder(Document settings)
+        {
+            return settings != null && settings.remoteFolder != null && settings.remoteFolder.Length != 0;
         }
 
         private HashSet<ExDFSFile> getFiles()
@@ -149,6 +164,10 @@ namespace SoapAPIConnector
                 Logger.log("ERROR: " + e.Message + ", file [" + file.fileName + "] will be waiting for next sending");
             }
             else if (e.Message.Contains("invalid entry CRC"))
+            {
+                Logger.log("ERROR: " + e.Message + ", file [" + file.fileName + "] will be waiting for next sending");
+            }
+            else if (e.Message.Contains("Unexpected character encountered"))
             {
                 Logger.log("ERROR: " + e.Message + ", file [" + file.fileName + "] will be waiting for next sending");
             }

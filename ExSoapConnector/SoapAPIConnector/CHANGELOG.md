@@ -186,3 +186,14 @@ FIXES
 FEATURES
  
 * 
+
+2.3.0 (2019-01-17)
+
+FIXES
+ 
+* [unexpected character] error handling
+* extended logging while exception handling
+
+FEATURES
+ 
+* remote folder usage in config

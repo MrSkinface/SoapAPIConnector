@@ -42,7 +42,7 @@ namespace SoapAPIConnector
             }
             catch (Exception e)
             {
-                Logger.log(e.Message);
+                Logger.error(e);
             }
             Logger.log("inbound processed");            
         }

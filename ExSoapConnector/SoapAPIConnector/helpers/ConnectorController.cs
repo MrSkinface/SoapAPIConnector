@@ -346,6 +346,12 @@ namespace APICon.controller
             Logger.log(fileName + " sent");
         }
 
+        public static void uploadDoc(string fileName, byte[] body, string remoteFolder)
+        {
+            Soap.uploadDoc(fileName, body, remoteFolder);
+            Logger.log(fileName + " sent to [" + remoteFolder + "]");
+        }
+
         public static ExDFSFile setBodyFromApi(ExDFSFile file)
         {
             string uuid = getUUID(file.fileName);

@@ -36,6 +36,16 @@ namespace APICon.logger
             File.AppendAllText(sb.ToString(), textToLog);
             Console.Write(textToLog);
         }
+        public static void error(Exception e)
+        {
+            error("[ERROR] " + e.Message, e);
+        }
+        public static void error(string message, Exception e)
+        {
+            Console.WriteLine(e.StackTrace);
+            log("[ERROR] " + message);
+            error(e.StackTrace);
+        }
         public static void checkIfExist()
         {
             if (!Directory.Exists(logPath))

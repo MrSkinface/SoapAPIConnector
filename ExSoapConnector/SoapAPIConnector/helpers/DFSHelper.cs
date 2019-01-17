@@ -95,8 +95,7 @@ namespace APICon.Util
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.StackTrace);//debug only
-                Logger.log(ex.Message);
+                Logger.error(ex);
                 return false;
             }
         }
@@ -198,8 +197,7 @@ namespace APICon.Util
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.StackTrace);//debug only
-                Logger.log(ex.Message);
+                Logger.error(ex);
                 return false;
             }
         }
@@ -256,24 +254,10 @@ namespace APICon.Util
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.StackTrace);//debug only
-                Logger.log(ex.Message);
+                Logger.error(ex);
                 return false;
             }
         }
-
-        /*
-        public static void saveStatusForTicket(ExDFSFile file)
-        {
-            saveStatusForTicket(file, null);
-        }
-        public static void saveStatusForTicket(ExDFSFile file, string errorMessage)
-        {
-            if (file.ticket != null)
-            {
-                saveStatus(file.ticket.body, file.settings, errorMessage);
-            }
-        }*/
 
         public static void saveStatus(ExDFSFile file)
         {
@@ -281,7 +265,7 @@ namespace APICon.Util
         }
         public static void saveStatus(ExDFSFile file, string errorMessage)
         {
-            if (file.settings.status != null && file.body != null)
+            if (file.settings != null && file.settings.status != null && file.body != null)
             {
                 saveStatus(file.body, file.settings, errorMessage);
             }
@@ -378,8 +362,7 @@ namespace APICon.Util
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.StackTrace);
-                Logger.log("error while getting value [" + xPathPattern + "] . " + e.Message);
+                Logger.error("error while getting value [" + xPathPattern + "] . ", e);
                 return null;
             }
         }
@@ -394,8 +377,7 @@ namespace APICon.Util
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.StackTrace);
-                Logger.log("error while getting value [" + xPathPattern + "] . " + e.Message);
+                Logger.error("error while getting value [" + xPathPattern + "] . " , e);
                 return null;
             }
         }
@@ -417,8 +399,7 @@ namespace APICon.Util
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.StackTrace);
-                Logger.log(e.Message);                
+                Logger.error(e);
             }
         }
 

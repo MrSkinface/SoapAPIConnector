@@ -42,13 +42,13 @@ namespace SoapAPIConnector
                     }
                     catch (Exception e)
                     {
-                        handleTicketsException(e,file);
+                        handleTicketsException(e, file);
                     }
                 }
             }
             catch (Exception e)
             {
-                Logger.log(e.Message);
+                Logger.error(e);
             }
             Logger.log("tickets processed");
         }
@@ -86,7 +86,7 @@ namespace SoapAPIConnector
                 }
                 catch (Exception e)
                 {                    
-                    Logger.log("while getting [" + fileName + "] : " + e.Message);
+                    Logger.error("while getting [" + fileName + "]" , e);
                 }
             }
             return files;
