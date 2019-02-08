@@ -197,3 +197,13 @@ FIXES
 FEATURES
  
 * remote folder usage in config
+
+2.3.1 (2019-02-08)
+
+FIXES
+ 
+* [bad json] error handling
+
+FEATURES
+ 
+*

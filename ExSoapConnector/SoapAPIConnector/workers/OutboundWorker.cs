@@ -171,6 +171,10 @@ namespace SoapAPIConnector
             {
                 Logger.log("ERROR: " + e.Message + ", file [" + file.fileName + "] will be waiting for next sending");
             }
+            else if (e.Message.Contains("Bad JSON"))
+            {
+                Logger.log("ERROR: " + e.Message + ", file [" + file.fileName + "] will be waiting for next sending");
+            }
             else
             {
                 DFSHelper.saveStatus(file, e.Message);                
