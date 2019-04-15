@@ -207,3 +207,13 @@ FIXES
 FEATURES
  
 *
+
+2.3.2 (2019-04-15)
+
+FIXES
+ 
+* gracefull handling "server gone away" 
+
+FEATURES
+ 
+* dealing with new upd/ukd format

@@ -141,23 +141,38 @@ namespace APICon.conf
         }
         public Document GetCustomOutboundSettingsByPath(string docType, string path)
         {
-            /*Console.WriteLine(docType);
-            Console.WriteLine(path);
-            Console.WriteLine(Path.GetDirectoryName(path) + "\\");
+            List<string> upd = new List<string>(new string[] { "ON_SCHFDOPPR", "ON_NSCHFDOPPR" });
+            List<string> pok = new List<string>(new string[] { "ON_SCHFDOPPOK", "ON_NSCHFDOPPOK" });
 
             string dirName = Path.GetDirectoryName(path);
             foreach (Document doc in this.Outbound.Document)
             {
-                Console.WriteLine((doc.LocalPath.Contains(dirName)) ||(doc.LocalPath.Contains(dirName + "\\")));
-                foreach (string p in doc.LocalPath)
-                {
-                    Console.WriteLine(p);
-                }
-            }*/
-            string dirName = Path.GetDirectoryName(path);
-            foreach (Document doc in this.Outbound.Document)
-                if ((doc.Doctype == docType) || (doc.LocalPath.Contains(dirName)) || (doc.LocalPath.Contains(dirName + "\\")))
-                    return doc;
+                if ((doc.LocalPath.Contains(dirName)) || (doc.LocalPath.Contains(dirName + "\\")))
+                    if (doc.Doctype == docType)
+                    {
+                        return doc;
+                    }
+                    else
+                    {
+                        if ((upd.Contains(doc.Doctype)) && (upd.Contains(docType)))
+                        {
+                            return doc;
+                        }
+                        else if (((doc.Doctype.StartsWith("ON_SCHFDOPPR")) || (doc.Doctype.StartsWith("ON_NSCHFDOPPR"))) && ((docType.StartsWith("ON_SCHFDOPPR")) || (docType.StartsWith("ON_NSCHFDOPPR"))))
+                        {
+                            return doc;
+                        }
+                        else if ((pok.Contains(doc.Doctype)) && (pok.Contains(docType)))
+                        {
+                            return doc;
+                        }
+                        else if (((doc.Doctype.StartsWith("ON_SCHFDOPPOK")) || (doc.Doctype.StartsWith("ON_NSCHFDOPPOK"))) && ((docType.StartsWith("ON_SCHFDOPPOK")) || (docType.StartsWith("ON_NSCHFDOPPOK"))))
+                        {
+                            return doc;
+                        }
+                    }
+                
+            }
             return null;
         }
         public Document GetCustomEDOTicketSettings(string docType)

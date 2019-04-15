@@ -22,17 +22,26 @@ namespace APICon.soap
 
         public static void Authorize(string login, string pass)
         {
-            ExiteWsClient client = configureClient();
-            ediLogin user = new ediLogin();
-            user.login = login;
-            user.pass = Utils.GetMD5String(pass);
-            getListRequest req = new getListRequest();
-            req.user = user;
-            getListResponse response = client.getList(req);            
-            if (response.result == null || response.result.errorCode != 0)
-                throw new Exception(response.result.errorMessage);
-            soapAuth = user;
+            try
+            {
+                ExiteWsClient client = configureClient();
+                ediLogin user = new ediLogin();
+                user.login = login;
+                user.pass = Utils.GetMD5String(pass);
+                getListRequest req = new getListRequest();
+                req.user = user;
+                getListResponse response = client.getList(req);
+                if (response.result == null || response.result.errorCode != 0)
+                    throw new Exception(response.result.errorMessage);
+                soapAuth = user;
+            }
+            catch (Exception ex)
+            {
+                Logger.error("Authorization failed, shutting down ...", ex);
+                Environment.Exit(1);
+            }
         }
+
         public static string[] getList()
         {
             ExiteWsClient client = configureClient();

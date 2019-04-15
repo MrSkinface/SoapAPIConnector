@@ -24,34 +24,38 @@ namespace APICon.rest
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
-                Console.WriteLine(ex.StackTrace);                             
+                Logger.error("Authorization failed, shutting down ...", ex);
+                Environment.Exit(1);
             }
         }
+
         public static void send(string body, string sign, string doc_type)
         {
             Request req = null;
-            if (doc_type.StartsWith("ON_SCHFDOPPR") || doc_type.StartsWith("ON_KORSCHFDOPPR"))
+            if (doc_type.StartsWith("ON_SCHFDOPPR") || doc_type.StartsWith("ON_KORSCHFDOPPR") ||
+                doc_type.StartsWith("ON_NSCHFDOPPR") || doc_type.StartsWith("ON_NKORSCHFDOPPR"))
                 req = new DocumentUPDSendRequest(authToken, body, sign, doc_type);
             else
                 req = new DocumentSendRequest(authToken, body, sign, doc_type);
             DocumentSendResponse response = (DocumentSendResponse)Http.post<DocumentSendResponse>("Document/Send", req);
             if (response.intCode != 200)
                 throw new Exception(response.varMessage);
-
         }
+
         public static byte[] getTicket(ExSigner signer, string uuid)
         {
             CreateTicketRequest req = new CreateTicketRequest(authToken, uuid, signer);
             CreateTicketResponse response = (CreateTicketResponse)Http.post<CreateTicketResponse>("Ticket/Generate", req);
             return Utils.Base64DecodeToBytes(response.content, "windows-1251");
         }
+
         public static void sendTicket(byte[] content, byte[] sign, string docId)
         {            
             string base64content = Convert.ToBase64String(content);
             string base64sign = Convert.ToBase64String(sign);
             sendTicket(base64content, base64sign, docId);
         }
+
         public static void sendTicket(string base64content, string base64sign, string docId)
         {
             EnqueueTicketRequest req = new EnqueueTicketRequest(authToken, docId, base64content, base64sign);
@@ -69,6 +73,7 @@ namespace APICon.rest
                 throw new Exception(resp.varMessage);
             return resp;
         }
+
         public static GetContentResponse GetContentResponse(string docGUID)
         { 
             GetContentRequest req = new GetContentRequest(authToken, docGUID);
